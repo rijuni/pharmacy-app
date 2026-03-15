@@ -9,7 +9,9 @@ const Navbar = () => {
   const cartItems = useSelector((state) => state.cart.items);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -19,7 +21,6 @@ const Navbar = () => {
      navigate('/');
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -30,11 +31,32 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.length > 2) {
+        setIsSearching(true);
+        try {
+          // Placeholder for Meilisearch logic
+          // const response = await fetch(`http://localhost:7700/indexes/products/search`, { ... });
+          setSearchResults([]);
+        } catch (error) {
+          console.error("Search failed:", error);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
   return (
-    <header className="bg-white shadow sticky top-0 z-50">
+    <header className="glass-card sticky top-0 z-50 transition-all duration-300">
       {/* Top Banner */}
-      <div className="bg-gray-100 px-4 py-1.5 flex justify-center items-center w-full border-b border-gray-200">
-        <div className="bg-red-100 text-red-700 text-[11px] font-extrabold px-4 py-1 rounded-full flex items-center gap-2 shadow-sm border border-red-200 animate-pulse uppercase tracking-widest cursor-default">
+      <div className="bg-brand-50/80 px-4 py-1.5 flex justify-center items-center w-full border-b border-brand-100">
+        <div className="bg-brand-100 text-brand-700 text-[11px] font-extrabold px-4 py-1 rounded-full flex items-center gap-2 shadow-sm border border-brand-200 animate-pulse uppercase tracking-widest cursor-default">
            🚨 Fast Delivery within 3km of Hospital
         </div>
       </div>
@@ -43,8 +65,8 @@ const Navbar = () => {
         <div className="flex justify-between items-center">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold text-brand-600 tracking-tight">
-              HealthMeds
+            <h1 className="text-2xl font-black text-emerald-deep tracking-tighter">
+              Health<span className="text-brand-500">Meds</span>
             </h1>
             <span className="bg-brand-100 text-brand-800 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider hidden sm:block">
               Pharmacy
@@ -53,14 +75,56 @@ const Navbar = () => {
 
           {/* Search Bar */}
           <div className="hidden md:flex flex-1 max-w-2xl mx-8 relative">
-             <input 
-               type="text" 
-               placeholder="Search for Medicines, Lab Tests, and More..." 
-               className="w-full bg-gray-50 border border-gray-300 rounded-lg py-2.5 pl-4 pr-12 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
-             />
-             <button className="absolute right-0 top-0 h-full px-4 text-gray-400 hover:text-brand-500">
-               <Search size={20} />
-             </button>
+             <form onSubmit={(e) => {
+                e.preventDefault();
+                if (searchQuery.trim()) {
+                  navigate(`/search?q=${searchQuery}`);
+                  setSearchResults([]);
+                }
+             }} className="w-full relative">
+                <input 
+                  type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search for Medicines, Lab Tests, and More..." 
+                  className="w-full bg-gray-50 border border-gray-300 rounded-lg py-2.5 pl-4 pr-12 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-shadow"
+                />
+                <button type="submit" className="absolute right-0 top-0 h-full px-4 text-gray-400 hover:text-brand-500">
+                  <Search size={20} />
+                </button>
+             </form>
+
+             {/* Search Results Dropdown */}
+             {searchResults.length > 0 && (
+               <div className="absolute top-full left-0 right-0 bg-white border border-gray-100 rounded-b-xl shadow-xl z-50 max-h-96 overflow-y-auto mt-1">
+                 {searchResults.slice(0, 5).map((result) => (
+                   <Link 
+                     key={result.id} 
+                     to={`/product/${result.id}`}
+                     onClick={() => setSearchResults([])}
+                     className="flex items-center gap-4 p-4 hover:bg-brand-50 transition-colors border-b border-gray-50 last:border-0"
+                   >
+                     <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-brand-500 font-bold">
+                       {result.name[0]}
+                     </div>
+                     <div>
+                       <p className="font-bold text-gray-900">{result.name}</p>
+                       <p className="text-xs text-gray-500 line-clamp-1">{result.description}</p>
+                     </div>
+                     <div className="ml-auto font-black text-brand-600">
+                       ₹{result.price}
+                     </div>
+                   </Link>
+                 ))}
+                 <Link 
+                   to={`/search?q=${searchQuery}`}
+                   onClick={() => setSearchResults([])}
+                   className="block p-3 text-center text-sm font-bold text-brand-600 hover:bg-brand-50 transition-colors"
+                 >
+                   See all {searchResults.length} results
+                 </Link>
+               </div>
+             )}
           </div>
 
           {/* Actions */}

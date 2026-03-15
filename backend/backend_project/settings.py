@@ -169,3 +169,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+# Meilisearch configuration
+MEILISEARCH_HOST = 'http://localhost:7700'
+MEILISEARCH_API_KEY = 'masterKey' # Default for local dev
+

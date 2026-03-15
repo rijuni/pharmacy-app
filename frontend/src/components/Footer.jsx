@@ -7,7 +7,9 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
            <div className="col-span-1 lg:col-span-2">
-              <h2 className="text-2xl font-extrabold text-brand-600 tracking-tight mb-4">HealthMeds</h2>
+              <h2 className="text-2xl font-black text-emerald-deep tracking-tighter mb-4">
+                Health<span className="text-brand-500">Meds</span>
+              </h2>
               <p className="text-sm text-gray-500 mb-6 max-w-sm">
                  India's leading digital healthcare platform. From doctor consultations on chat to online pharmacy and lab tests at home: we have it all covered for you.
               </p>
