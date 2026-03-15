@@ -31,13 +31,19 @@ const SearchPage = () => {
         const fetchResults = async () => {
             setLoading(true);
             try {
-                // Placeholder for Meilisearch integration
-                // const client = new MeiliSearch({ host: 'http://localhost:7700', apiKey: 'masterKey' });
-                // const index = client.index('products');
-                // const search = await index.search(query, { ... });
-                setResults([]);
+                let url = `http://localhost:8000/api/products/search/?q=${encodeURIComponent(query)}`;
+                if (categoryId) {
+                    url += `&category=${encodeURIComponent(categoryId)}`;
+                }
+                if (requiresRx === 'true') {
+                    url += `&requires_prescription=true`;
+                }
+                const response = await fetch(url);
+                const data = await response.json();
+                setResults(Array.isArray(data) ? data : []);
             } catch (err) {
                 console.error("Search failed", err);
+                setResults([]);
             } finally {
                 setLoading(false);
             }
@@ -45,12 +51,12 @@ const SearchPage = () => {
         fetchResults();
     }, [query, categoryId, requiresRx]);
 
-    const handleCategoryChange = (id) => {
+    const handleCategoryChange = (id, name) => {
         const newParams = new URLSearchParams(searchParams);
         if (id === categoryId) {
             newParams.delete('category');
         } else {
-            newParams.set('category', id);
+            newParams.set('category', name);
         }
         setSearchParams(newParams);
     };
@@ -83,15 +89,15 @@ const SearchPage = () => {
                             {categories.map((cat) => (
                                 <button
                                     key={cat.id}
-                                    onClick={() => handleCategoryChange(cat.id)}
+                                    onClick={() => handleCategoryChange(cat.id, cat.name)}
                                     className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-all flex items-center justify-between group ${
-                                        categoryId == cat.id 
+                                        categoryId == cat.name 
                                         ? 'bg-brand-500 text-white font-bold shadow-lg shadow-brand-500/20' 
                                         : 'text-slate-500 hover:bg-slate-50'
                                     }`}
                                 >
                                     {cat.name}
-                                    <ChevronRight size={14} className={categoryId == cat.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 transition-opacity'} />
+                                    <ChevronRight size={14} className={categoryId == cat.name ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 transition-opacity'} />
                                 </button>
                             ))}
                         </div>
@@ -140,7 +146,7 @@ const SearchPage = () => {
                 {loading ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[1, 2, 3, 4, 5, 6].map((n) => (
-                            <div key={n} className="glass-card rounded-4xl p-5 h-[400px] animate-pulse bg-slate-50/50"></div>
+                            <div key={n} className="glass-card rounded-4xl p-5 h-100 animate-pulse bg-slate-50/50"></div>
                         ))}
                     </div>
                 ) : (

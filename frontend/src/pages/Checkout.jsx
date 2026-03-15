@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { fetchCart } from '../store/cartSlice';
 import { openAuthModal } from '../store/authSlice';
-import { MapPin, CreditCard, DollarSign, CheckCircle } from 'lucide-react';
+import { MapPin, CreditCard, DollarSign, CheckCircle, AlertCircle } from 'lucide-react';
 
 const Checkout = () => {
    const { items, totalPrice } = useSelector(state => state.cart);
@@ -16,6 +16,7 @@ const Checkout = () => {
    const [isProcessing, setIsProcessing] = useState(false);
    const [error, setError] = useState('');
    const [success, setSuccess] = useState(false);
+   const [prescriptionWarning, setPrescriptionWarning] = useState('');
 
    const dispatch = useDispatch();
    const navigate = useNavigate();
@@ -40,6 +41,12 @@ const Checkout = () => {
          }
       };
 
+      // Check for Rx medicines
+      const hasRxMedicines = items.some(item => item.product.requires_prescription);
+      if (hasRxMedicines) {
+         setPrescriptionWarning('This order contains prescription medicines. Make sure you have uploaded a valid prescription.');
+      }
+
       fetchAddresses();
    }, [isAuthenticated, items, navigate, dispatch]);
 
@@ -53,25 +60,20 @@ const Checkout = () => {
       setError('');
 
       try {
-         // Create the order payload
          const orderData = {
             delivery_address: selectedAddress,
-            // prescription: null // Need logic to map uploaded prescription ID, for now we will rely on Cart checks or bypass if mock
+            payment_method: paymentMethod,
          };
 
          await api.post('orders/orders/', orderData);
-         
-         // Clear cart logic happens on backend upon order creation
-         dispatch(fetchCart()); 
+         dispatch(fetchCart());
          setSuccess(true);
-         
+
          setTimeout(() => {
             navigate('/profile');
          }, 3000);
-
       } catch (err) {
          if (err.response && err.response.data) {
-            // Display backend validation error (e.g. Geofence failed, Prescription missing)
             const errorKeys = Object.keys(err.response.data);
             setError(err.response.data[errorKeys[0]] || "Order failed. Please check criteria.");
          } else {
@@ -97,7 +99,15 @@ const Checkout = () => {
       <div className="flex flex-col lg:flex-row gap-8">
          <div className="flex-1 space-y-6">
             
-            {/* Delivery Address Secton */}
+            {/* Prescription Warning */}
+            {prescriptionWarning && (
+               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3">
+                  <AlertCircle className="text-amber-600 shrink-0" size={20} />
+                  <p className="text-amber-800 text-sm">{prescriptionWarning}</p>
+               </div>
+            )}
+
+            {/* Delivery Address Section */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <span className="bg-brand-500 text-white rounded-full h-6 w-6 flex items-center justify-center text-xs">1</span> 
@@ -141,17 +151,17 @@ const Checkout = () => {
                
                <div className="space-y-3">
                   <label className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all ${paymentMethod === 'cod' ? 'border-brand-500 bg-brand-50' : 'border-gray-200'}`}>
-                     <input type="radio" value="cod" checked={paymentMethod === 'cod'} onChange={() => setPaymentMethod('cod')} className="text-brand-500" />
+                     <input type="radio" value="cod" checked={paymentMethod === 'cod'} onChange={(e) => setPaymentMethod(e.target.value)} className="text-brand-500" />
                      <DollarSign className="text-brand-600" size={24}/>
                      <span className="font-bold text-gray-900">Cash on Delivery (COD)</span>
                   </label>
                   
-                  <label className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all ${paymentMethod === 'card' ? 'border-brand-500 bg-brand-50' : 'border-gray-200'}`}>
-                     <input type="radio" value="card" checked={paymentMethod === 'card'} onChange={() => setPaymentMethod('card')} className="text-brand-500" />
-                     <CreditCard className="text-gray-600" size={24}/>
+                  <label className={`flex items-center gap-4 p-4 rounded-lg border cursor-pointer transition-all opacity-50`}>
+                     <input type="radio" value="card" disabled className="text-gray-400 cursor-not-allowed" />
+                     <CreditCard className="text-gray-400" size={24}/>
                      <div>
-                        <span className="font-bold text-gray-900 block">Credit / Debit Card</span>
-                        <span className="text-xs text-gray-500">Not functional in MVP.</span>
+                        <span className="font-bold text-gray-600 block">Credit / Debit Card</span>
+                        <span className="text-xs text-gray-400">Coming soon - Stripe integration</span>
                      </div>
                   </label>
                </div>
@@ -166,8 +176,8 @@ const Checkout = () => {
                <div className="space-y-3 text-sm flex flex-col mb-4">
                   {items.map(item => (
                      <div key={item.id} className="flex justify-between items-start border-b border-gray-50 pb-2">
-                        <span className="text-gray-600 line-clamp-1 flex-1 pr-2">{item.quantity}x {item.product_details.name}</span>
-                        <span className="font-medium">₹{(item.product_details.discount_price || item.product_details.price) * item.quantity}</span>
+                        <span className="text-gray-600 line-clamp-1 flex-1 pr-2">{item.quantity}x {item.product.name}</span>
+                        <span className="font-medium">₹{(item.product.discount_price || item.product.price) * item.quantity}</span>
                      </div>
                   ))}
                </div>

@@ -55,10 +55,15 @@ const ProductDetails = () => {
                     <AlertTriangle size={14} /> Prescription Required
                  </span>
                )}
+               {!product.is_available && (
+                 <div className="absolute inset-0 bg-black/40 backdrop-blur-sm rounded-xl flex items-center justify-center z-20">
+                    <span className="bg-red-600 text-white text-lg font-black px-6 py-3 rounded-full">OUT OF STOCK</span>
+                 </div>
+               )}
                <button className="absolute top-4 right-4 bg-white p-2 rounded-full shadow hover:text-red-500 text-gray-400">
                   <Heart size={20} />
                </button>
-               <img src={getImageUrl(product.image)} alt={product.name} className="max-h-full max-w-full object-contain mix-blend-multiply" />
+               <img src={getImageUrl(product.image)} alt={product.name} className={`max-h-full max-w-full object-contain mix-blend-multiply ${!product.is_available && 'opacity-60'}`} />
             </div>
 
             {/* Product Meta */}
@@ -86,9 +91,14 @@ const ProductDetails = () => {
 
                   <button 
                     onClick={handleAdd}
-                    className="bg-brand-500 hover:bg-brand-600 text-white font-bold py-3 px-8 rounded-lg shadow-sm transition-transform transform hover:-translate-y-0.5"
+                    disabled={!product.is_available}
+                    className={`font-bold py-3 px-8 rounded-lg shadow-sm transition-transform transform ${
+                      product.is_available
+                        ? 'bg-brand-500 hover:bg-brand-600 text-white hover:-translate-y-0.5 cursor-pointer'
+                        : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
+                    }`}
                   >
-                     Add to Cart
+                     {product.is_available ? 'Add to Cart' : 'Out of Stock'}
                   </button>
                </div>
 
@@ -104,6 +114,30 @@ const ProductDetails = () => {
                         <Shield size={18} className="text-blue-500"/> 100% Genuine product guaranteed
                      </div>
                   </div>
+
+                  <div className="pt-4 border-t">
+                     <h4 className="font-bold text-gray-900 mb-2">Availability</h4>
+                     <div className={`p-3 rounded-lg ${product.is_available ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                        <p className={`font-bold ${product.is_available ? 'text-green-700' : 'text-red-700'}`}>
+                           {product.is_available ? '✓ In Stock' : '✗ Out of Stock'}
+                        </p>
+                        {product.stock > 0 && <p className="text-xs text-gray-600 mt-1">{product.stock} units available</p>}
+                     </div>
+                  </div>
+
+                  {product.manufacturer && (
+                     <div className="pt-4 border-t">
+                        <h4 className="font-bold text-gray-900 mb-1">Manufacturer</h4>
+                        <p className="text-gray-600">{product.manufacturer}</p>
+                     </div>
+                  )}
+
+                  {product.strength && (
+                     <div className="pt-2">
+                        <h4 className="font-bold text-gray-900 mb-1">Strength</h4>
+                        <p className="text-gray-600">{product.strength}</p>
+                     </div>
+                  )}
                </div>
             </div>
          </div>

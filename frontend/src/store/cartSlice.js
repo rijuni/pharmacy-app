@@ -17,14 +17,28 @@ const cartSlice = createSlice({
     items: [],
     totalPrice: 0,
     status: 'idle',
+    error: null,
   },
-  reducers: {},
+  reducers: {
+    clearCart: (state) => {
+      state.items = [];
+      state.totalPrice = 0;
+    },
+  },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchCart.pending, (state) => {
+        state.status = 'loading';
+      })
       .addCase(fetchCart.fulfilled, (state, action) => {
         state.items = action.payload.items || [];
         state.totalPrice = action.payload.total_price || 0;
         state.status = 'succeeded';
+        state.error = null;
+      })
+      .addCase(fetchCart.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.error.message;
       })
       .addCase(addToCart.fulfilled, (state, action) => {
         state.items = action.payload.items || [];
@@ -33,4 +47,5 @@ const cartSlice = createSlice({
   },
 });
 
+export const { clearCart } = cartSlice.actions;
 export default cartSlice.reducer;

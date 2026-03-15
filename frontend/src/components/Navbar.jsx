@@ -36,11 +36,12 @@ const Navbar = () => {
       if (searchQuery.length > 2) {
         setIsSearching(true);
         try {
-          // Placeholder for Meilisearch logic
-          // const response = await fetch(`http://localhost:7700/indexes/products/search`, { ... });
-          setSearchResults([]);
+          const response = await fetch(`http://localhost:8000/api/products/search/?q=${encodeURIComponent(searchQuery)}`);
+          const results = await response.json();
+          setSearchResults(Array.isArray(results) ? results.slice(0, 5) : []);
         } catch (error) {
           console.error("Search failed:", error);
+          setSearchResults([]);
         } finally {
           setIsSearching(false);
         }

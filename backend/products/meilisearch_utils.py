@@ -19,16 +19,26 @@ def sync_products_to_meilisearch():
         documents.append({
             'id': product.id,
             'name': product.name,
-            'description': product.description,
+            'generic_name': product.generic_name or '',
+            'description': product.description or '',
             'price': float(product.price),
             'stock': product.stock,
             'requires_prescription': product.requires_prescription,
-            'category': product.category.name if product.category else 'Uncategorized'
+            'category': product.category.name if product.category else 'Uncategorized',
+            'manufacturer': product.manufacturer or '',
+            'strength': product.strength or '',
+            'form': product.form or '',
+            'availability_status': product.availability_status,
+            'is_available': product.is_available,
         })
     
     # Update index settings for better search
-    index.update_searchable_attributes(['name', 'description', 'category'])
-    index.update_filterable_attributes(['category', 'requires_prescription'])
-    index.update_sortable_attributes(['price'])
+    index.update_searchable_attributes([
+        'name', 'generic_name', 'description', 'category', 'manufacturer', 'strength', 'form'
+    ])
+    index.update_filterable_attributes([
+        'category', 'requires_prescription', 'availability_status', 'is_available'
+    ])
+    index.update_sortable_attributes(['price', 'name'])
     
     return index.add_documents(documents)

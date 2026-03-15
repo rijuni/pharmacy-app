@@ -48,7 +48,7 @@ const Cart = () => {
      );
   }
 
-  const requiresRx = items.some(item => item.product_details.requires_prescription);
+  const requiresRx = items.some(item => item.product.requires_prescription);
 
   return (
     <div className="flex flex-col lg:flex-row gap-8">
@@ -65,29 +65,29 @@ const Cart = () => {
            <div className="space-y-4">
              {items.map((item) => (
                 <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-                   <img src={getImageUrl(item.product_details.image)} alt={item.product_details.name} className="w-20 h-20 object-contain bg-gray-50 rounded p-1"/>
+                   <img src={getImageUrl(item.product.image)} alt={item.product.name} className="w-20 h-20 object-contain bg-gray-50 rounded p-1"/>
                    
                    <div className="flex-1">
-                     <h4 className="font-bold text-gray-800 line-clamp-1">{item.product_details.name}</h4>
-                     <p className="text-sm text-gray-500">{item.product_details.generic_name}</p>
-                     {item.product_details.requires_prescription && (
+                     <h4 className="font-bold text-gray-800 line-clamp-1">{item.product.name}</h4>
+                     <p className="text-sm text-gray-500">{item.product.generic_name}</p>
+                     {item.product.requires_prescription && (
                         <span className="text-[10px] bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded mt-1 inline-block">Rx Required</span>
                      )}
                    </div>
 
                    <div className="flex items-center gap-3">
                       <div className="flex items-center border border-gray-300 rounded overflow-hidden">
-                        <button onClick={() => handleUpdateQuantity(item.product, -1)} className="px-2 py-1 bg-gray-50 hover:bg-gray-100"> - </button>
+                        <button onClick={() => handleUpdateQuantity(item.product.id, -1)} className="px-2 py-1 bg-gray-50 hover:bg-gray-100"> - </button>
                         <span className="px-3 font-semibold text-sm">{item.quantity}</span>
-                        <button onClick={() => handleUpdateQuantity(item.product, 1)} className="px-2 py-1 bg-gray-50 hover:bg-gray-100 text-brand-600 font-bold"> + </button>
+                        <button onClick={() => handleUpdateQuantity(item.product.id, 1)} className="px-2 py-1 bg-gray-50 hover:bg-gray-100 text-brand-600 font-bold"> + </button>
                       </div>
                    </div>
 
                    <div className="text-right min-w-20">
                       <div className="font-bold text-gray-900">
-                         ₹{item.product_details.discount_price ? item.product_details.discount_price * item.quantity : item.product_details.price * item.quantity}
+                         ₹{item.product.discount_price ? item.product.discount_price * item.quantity : item.product.price * item.quantity}
                       </div>
-                      <button onClick={() => handleRemoveItem(item.product)} className="text-red-500 hover:text-red-700 text-xs font-semibold mt-2 flex items-center justify-end gap-1 w-full">
+                      <button onClick={() => handleRemoveItem(item.product.id)} className="text-red-500 hover:text-red-700 text-xs font-semibold mt-2 flex items-center justify-end gap-1 w-full">
                          <Trash2 size={12}/> Remove
                       </button>
                    </div>
