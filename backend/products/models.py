@@ -27,6 +27,14 @@ class Product(models.Model):
     manufacturer = models.CharField(max_length=200, blank=True, null=True)
     strength = models.CharField(max_length=100, blank=True, null=True, help_text="e.g., 500mg, 10ml")
     form = models.CharField(max_length=100, blank=True, null=True, help_text="e.g., Tablet, Capsule, Syrup")
+    
+    # Medical Information for 1mg-style features
+    salt_composition = models.CharField(max_length=500, blank=True, null=True, help_text="e.g., Paracetamol (500mg)")
+    side_effects = models.TextField(blank=True, null=True)
+    expert_tips = models.TextField(blank=True, null=True)
+    interactions = models.TextField(blank=True, null=True)
+    how_to_use = models.TextField(blank=True, null=True)
+
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -3,12 +3,13 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { logout, openAuthModal } from '../store/authSlice';
-import { User, MapPin, Plus, LogOut, Package } from 'lucide-react';
+import { User, MapPin, Plus, LogOut, Package, FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
 
 const Profile = () => {
    const { user, isAuthenticated } = useSelector(state => state.auth);
    const [addresses, setAddresses] = useState([]);
    const [orders, setOrders] = useState([]);
+   const [prescriptions, setPrescriptions] = useState([]);
    const [activeTab, setActiveTab] = useState('orders');
    const dispatch = useDispatch();
    const navigate = useNavigate();
@@ -38,6 +39,9 @@ const Profile = () => {
 
             const ordRes = await api.get('orders/orders/');
             setOrders(ordRes.data);
+
+            const pxRes = await api.get('orders/prescriptions/');
+            setPrescriptions(pxRes.data);
          } catch (err) {
             console.error(err);
          }
@@ -91,6 +95,12 @@ const Profile = () => {
                   >
                      <MapPin size={18} /> Manage Addresses
                   </button>
+                  <button 
+                    onClick={() => setActiveTab('prescriptions')}
+                    className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 font-medium transition-colors ${activeTab === 'prescriptions' ? 'bg-brand-50 text-brand-600' : 'text-gray-600 hover:bg-gray-50'}`}
+                  >
+                     <FileText size={18} /> My Prescriptions
+                  </button>
                   <div className="h-px bg-gray-100 my-2"></div>
                   <button 
                     onClick={handleLogout}
@@ -129,7 +139,7 @@ const Profile = () => {
                                  <div className="space-y-2 mb-4">
                                     {order.items.map(item => (
                                        <div key={item.id} className="flex justify-between text-sm">
-                                          <span>{item.quantity}x {item.product_details.name}</span>
+                                          <span>{item.quantity}x {item.product.name}</span>
                                           <span className="font-medium">₹{item.price}</span>
                                        </div>
                                     ))}
@@ -204,6 +214,55 @@ const Profile = () => {
                                     <h4 className="font-bold text-gray-900">{addr.street_address}</h4>
                                     <p className="text-sm text-gray-600">{addr.city}, {addr.state} - {addr.postal_code}</p>
                                     <p className="text-xs text-gray-400 mt-2 font-mono">Lat: {addr.latitude}, Lng: {addr.longitude}</p>
+                                 </div>
+                              </div>
+                           ))}
+                        </div>
+                     )}
+                  </div>
+               )}
+
+               {activeTab === 'prescriptions' && (
+                  <div>
+                     <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-gray-900">My Prescriptions</h2>
+                        <button onClick={() => navigate('/prescriptions')} className="bg-brand-500 text-white hover:bg-brand-600 px-4 py-2 flex items-center gap-2 rounded-lg font-bold transition-all shadow-lg shadow-brand-500/20">
+                           <Plus size={18} /> Upload New
+                        </button>
+                     </div>
+
+                     {prescriptions.length === 0 ? (
+                        <div className="text-center py-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100">
+                           <FileText size={48} className="mx-auto text-slate-200 mb-4" />
+                           <p className="text-slate-400 font-medium">No prescriptions uploaded yet.</p>
+                        </div>
+                     ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                           {prescriptions.map(px => (
+                              <div key={px.id} className="glass-card rounded-2xl overflow-hidden border border-slate-100 flex flex-col">
+                                 <div className="h-40 bg-slate-100 relative overflow-hidden group">
+                                    <img src={`http://localhost:8000${px.image}`} alt="Prescription" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                       <a href={`http://localhost:8000${px.image}`} target="_blank" rel="noreferrer" className="bg-white/90 p-2 rounded-full text-slate-900">
+                                          <ExternalLink size={20} />
+                                       </a>
+                                    </div>
+                                 </div>
+                                 <div className="p-4 flex-1 flex flex-col justify-between">
+                                    <div className="flex items-center justify-between mb-2">
+                                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date(px.created_at).toLocaleDateString()}</span>
+                                       <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${
+                                         px.status === 'Verified' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                         px.status === 'Rejected' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                         'bg-amber-50 text-amber-600 border border-amber-100'
+                                       }`}>
+                                          {px.status === 'Verified' ? <CheckCircle size={10}/> : px.status === 'Rejected' ? <XCircle size={10}/> : <Clock size={10}/>}
+                                          {px.status}
+                                       </div>
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-semibold line-clamp-1 italic">
+                                       {px.is_verified ? "✅ Verified by Pharmacist" : "⏳ Pending verification"}
+                                    </p>
                                  </div>
                               </div>
                            ))}

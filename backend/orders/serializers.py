@@ -30,13 +30,22 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
+    address_details = serializers.SerializerMethodField()
+    
     class Meta:
         model = Order
         fields = '__all__'
-        read_only_fields = ('user', 'total_price', 'status')
+        read_only_fields = ('user', 'total_price')
+    
+    def get_address_details(self, obj):
+        if obj.address:
+            return f"{obj.address.street}, {obj.address.city}, {obj.address.state} - {obj.address.zip_code}"
+        return "Address removed"
 
 class PrescriptionSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    
     class Meta:
         model = Prescription
         fields = '__all__'
-        read_only_fields = ('user', 'status')
+        read_only_fields = ('user',)

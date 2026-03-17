@@ -7,6 +7,7 @@ const Medicines = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Filters
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -19,6 +20,8 @@ const Medicines = () => {
         setCategories(response.data);
       } catch (error) {
         console.error("Failed to fetch categories", error);
+        // Error on categories is usually a sign of backend being down
+        setError("Unable to connect to health server. Please check your connection.");
       }
     };
     fetchCategories();
@@ -27,6 +30,7 @@ const Medicines = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
+      setError(null);
       try {
         let url = 'products/products/';
         const params = new URLSearchParams();
@@ -37,10 +41,17 @@ const Medicines = () => {
         if (queryString) url += `?${queryString}`;
 
         const response = await api.get(url);
-        // API might return paginated { results: [...] } or just an array based on DRF config
-        setProducts(response.data.results || response.data);
+        // Ensure we always have an array
+        const data = response.data.results || response.data;
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          setProducts([]);
+          console.warn("Unexpected API response format", response.data);
+        }
       } catch (error) {
         console.error("Failed to fetch products", error);
+        setError("Failed to load medicines. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -106,6 +117,17 @@ const Medicines = () => {
         {loading ? (
           <div className="flex justify-center items-center h-48">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-500"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-16 bg-rose-50 rounded-xl border-2 border-dashed border-rose-200">
+            <h3 className="text-xl font-bold text-rose-700 mb-2">Service Temporarily Unavailable</h3>
+            <p className="text-rose-600 mb-4">{error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="bg-rose-500 text-white px-6 py-2 rounded-lg font-bold hover:bg-rose-600 transition-colors"
+            >
+              Refresh Page
+            </button>
           </div>
         ) : products.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

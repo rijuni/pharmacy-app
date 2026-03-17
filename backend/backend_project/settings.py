@@ -31,7 +31,7 @@ SECRET_KEY = 'django-insecure-w&ygsn@4*e5-w9_2wnl@t$6hl07%tk0jdbfbvid1v8h@au=8b8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -178,4 +179,8 @@ CORS_ALLOW_CREDENTIALS = True
 # Meilisearch configuration
 MEILISEARCH_HOST = 'http://localhost:7700'
 MEILISEARCH_API_KEY = 'masterKey' # Default for local dev
+
+# Razorpay configuration
+RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID', 'rzp_test_YourKeyHere')
+RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET', 'YourSecretHere')
 

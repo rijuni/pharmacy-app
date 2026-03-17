@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  user: null,
+  user: JSON.parse(localStorage.getItem('user')) || null,
   token: localStorage.getItem('access_token') || null,
   isAuthenticated: !!localStorage.getItem('access_token'),
   isAuthModalOpen: false,
@@ -15,14 +15,16 @@ const authSlice = createSlice({
       state.user = action.payload.user;
       state.token = action.payload.token;
       state.isAuthenticated = true;
-      state.isAuthModalOpen = false; // close automatically on success
+      state.isAuthModalOpen = false;
       localStorage.setItem('access_token', action.payload.token);
+      localStorage.setItem('user', JSON.stringify(action.payload.user));
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
       localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
     },
     openAuthModal: (state) => {
       state.isAuthModalOpen = true;

@@ -11,11 +11,21 @@ def sync_product_on_save(sender, instance, **kwargs):
     document = {
         'id': instance.id,
         'name': instance.name,
-        'description': instance.description,
+        'generic_name': instance.generic_name or '',
+        'description': instance.description or '',
         'price': float(instance.price),
         'stock': instance.stock,
         'requires_prescription': instance.requires_prescription,
-        'category': instance.category.name if instance.category else 'Uncategorized'
+        'category': instance.category.name if instance.category else 'Uncategorized',
+        'manufacturer': instance.manufacturer or '',
+        'strength': instance.strength or '',
+        'form': instance.form or '',
+        'availability_status': instance.availability_status,
+        'is_available': instance.is_available,
+        'salt_composition': instance.salt_composition or '',
+        'side_effects': instance.side_effects or '',
+        'expert_tips': instance.expert_tips or '',
+        'how_to_use': instance.how_to_use or '',
     }
     
     index.add_documents([document])

@@ -11,6 +11,10 @@ import Profile from './pages/Profile';
 import ProductDetails from './pages/ProductDetails';
 import Checkout from './pages/Checkout';
 import Search from './pages/Search';
+import Orders from './pages/Orders';
+import AdminPrescriptions from './pages/AdminPrescriptions';
+import AdminOrders from './pages/AdminOrders';
+import AdminAnalytics from './pages/AdminAnalytics';
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -31,6 +35,10 @@ const AnimatedRoutes = () => {
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/prescriptions" element={<Prescriptions />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/admin/prescriptions" element={<AdminPrescriptions />} />
+          <Route path="/admin/orders" element={<AdminOrders />} />
+          <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/search" element={<Search />} />
         </Routes>
       </motion.div>

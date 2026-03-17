@@ -164,11 +164,27 @@ const Navbar = () => {
                           <p className="text-sm font-bold text-gray-900 truncate">{user?.email || user?.username}</p>
                        </div>
                        <Link to="/profile" onClick={() => setShowDropdown(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600">
-                          My Profile & Orders
+                          My Profile
                        </Link>
+                       <Link to="/orders" onClick={() => setShowDropdown(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-600 font-medium">
+                          My Orders
+                       </Link>
+                       {user?.is_staff && (
+                         <div className="border-y border-emerald-100/50">
+                           <Link to="/admin/prescriptions" onClick={() => setShowDropdown(false)} className="block px-4 py-2 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 font-bold">
+                              Verify Prescriptions
+                           </Link>
+                           <Link to="/admin/orders" onClick={() => setShowDropdown(false)} className="block px-4 py-2 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 font-bold border-t border-emerald-100/50">
+                              Manage Orders
+                           </Link>
+                           <Link to="/admin/analytics" onClick={() => setShowDropdown(false)} className="block px-4 py-2 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 font-bold border-t border-emerald-100/50">
+                              Business Insights
+                           </Link>
+                         </div>
+                       )}
                        <button 
                          onClick={handleLogout}
-                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 mt-1"
                        >
                           <LogOut size={16} /> Logout
                        </button>
