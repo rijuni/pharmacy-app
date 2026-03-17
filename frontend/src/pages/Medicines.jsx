@@ -17,7 +17,8 @@ const Medicines = () => {
     const fetchCategories = async () => {
       try {
         const response = await api.get('products/categories/');
-        setCategories(response.data);
+        const data = response.data.results || response.data;
+        setCategories(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Failed to fetch categories", error);
         // Error on categories is usually a sign of backend being down

@@ -10,6 +10,9 @@ import stripe
 import razorpay
 import os
 from django.conf import settings
+from django.db.models import Sum, Count, F
+from django.utils import timezone
+from datetime import timedelta
 
 # Set Stripe API Key
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY', 'sk_test_your_key_here')
@@ -292,3 +295,47 @@ def verify_razorpay_payment(request):
         return Response({'status': 'Payment verified'}, status=status.HTTP_200_OK)
     except Exception:
         return Response({'detail': 'Payment verification failed'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAdminUser])
+def get_admin_reports(request):
+    """Get summarized reports for admin dashboard"""
+    from django.db.models import Sum, Count, F
+    from django.utils import timezone
+    from datetime import timedelta
+    # Time periods
+    today = timezone.now().date()
+    
+    # Sales Stats
+    total_sales = Order.objects.filter(payment_status='completed').aggregate(sum=Sum('total_price'))['sum'] or 0
+    today_sales = Order.objects.filter(created_at__date=today, payment_status='completed').aggregate(sum=Sum('total_price'))['sum'] or 0
+    
+    # Order Status counts
+    order_status_counts = Order.objects.values('status').annotate(count=Count('id'))
+    
+    # Inventory stats
+    total_products = Product.objects.count()
+    low_stock_products = Product.objects.filter(stock__lte=10, stock__gt=0).count()
+    out_of_stock_products = Product.objects.filter(stock=0).count()
+    
+    # Top selling medications
+    top_selling = OrderItem.objects.values(
+        'product__name', 'product__id'
+    ).annotate(
+        total_quantity=Sum('quantity'),
+        total_revenue=Sum(F('quantity') * F('price'))
+    ).order_by('-total_quantity')[:10]
+
+    return Response({
+        'sales': {
+            'total_lifetime': total_sales,
+            'today': today_sales,
+            'status_distribution': {item['status']: item['count'] for item in order_status_counts}
+        },
+        'inventory': {
+            'total_items': total_products,
+            'low_stock_count': low_stock_products,
+            'out_of_stock_count': out_of_stock_products
+        },
+        'top_selling': list(top_selling),
+    })

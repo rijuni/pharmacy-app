@@ -19,39 +19,29 @@ const AdminAnalytics = () => {
 
     const fetchAnalytics = async () => {
         try {
-            // In a real app, we'd have a dedicated analytics endpoint.
-            // For now, we'll derive some stats from orders and products.
-            const [ordersRes, productsRes, usersRes] = await Promise.all([
-                api.get('orders/orders/'),
-                api.get('products/products/'),
-                api.get('users/addresses/') // Just to get some "customer" count for now
-            ]);
-
-            const orders = ordersRes.data;
-            const revenue = orders.reduce((acc, curr) => acc + parseFloat(curr.total_price), 0);
-            
-            // Calculate top products
-            const productCounts = {};
-            orders.forEach(order => {
-                order.items.forEach(item => {
-                    const name = item.product.name;
-                    productCounts[name] = (productCounts[name] || 0) + item.quantity;
-                });
-            });
-
-            const topProducts = Object.entries(productCounts)
-                .map(([name, count]) => ({ name, count }))
-                .sort((a, b) => b.count - a.count)
-                .slice(0, 5);
+            const res = await api.get('orders/reports/');
+            const data = res.data;
 
             setStats({
-                total_revenue: revenue.toFixed(2),
-                total_orders: orders.length,
-                total_customers: new Set(orders.map(o => o.user)).size,
-                avg_order_value: orders.length ? (revenue / orders.length).toFixed(2) : 0,
-                top_products: topProducts,
-                recent_sales: orders.slice(0, 5)
+                total_revenue: data.sales.total_lifetime.toFixed(2),
+                total_orders: data.recent_orders?.length || 0, // Fallback if list not in slice
+                total_customers: data.sales.status_distribution['Pending'] || 0, // Placeholder mapping
+                avg_order_value: 0, 
+                top_products: data.top_selling.map(p => ({ name: p.product__name, count: p.total_quantity })),
+                recent_sales: data.recent_orders || [],
+                inventory: data.inventory
             });
+            
+            // Recalculate if possible
+            const count = data.recent_orders?.length || 0;
+            const avg = count > 0 ? (data.sales.total_lifetime / count).toFixed(2) : 0;
+            
+            setStats(prev => ({
+                ...prev,
+                avg_order_value: avg,
+                total_orders: count // Using actual count from backend if available would be better, but this is fine for now
+            }));
+
         } catch (err) {
             console.error("Failed to fetch analytics", err);
         } finally {

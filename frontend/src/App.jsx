@@ -15,6 +15,8 @@ import Orders from './pages/Orders';
 import AdminPrescriptions from './pages/AdminPrescriptions';
 import AdminOrders from './pages/AdminOrders';
 import AdminAnalytics from './pages/AdminAnalytics';
+import AdminInventory from './pages/AdminInventory';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -31,15 +33,20 @@ const AnimatedRoutes = () => {
           <Route path="/" element={<Home />} />
           <Route path="/medicines" element={<Medicines />} />
           <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
           <Route path="/product/:id" element={<ProductDetails />} />
-          <Route path="/prescriptions" element={<Prescriptions />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/admin/prescriptions" element={<AdminPrescriptions />} />
-          <Route path="/admin/orders" element={<AdminOrders />} />
-          <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/search" element={<Search />} />
+          
+          {/* User Routes (Protected) */}
+          <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+          <Route path="/prescriptions" element={<ProtectedRoute><Prescriptions /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+          
+          {/* Admin Routes (Staff Managed) */}
+          <Route path="/admin/prescriptions" element={<ProtectedRoute adminOnly={true}><AdminPrescriptions /></ProtectedRoute>} />
+          <Route path="/admin/orders" element={<ProtectedRoute adminOnly={true}><AdminOrders /></ProtectedRoute>} />
+          <Route path="/admin/analytics" element={<ProtectedRoute adminOnly={true}><AdminAnalytics /></ProtectedRoute>} />
+          <Route path="/admin/inventory" element={<ProtectedRoute adminOnly={true}><AdminInventory /></ProtectedRoute>} />
         </Routes>
       </motion.div>
     </AnimatePresence>
