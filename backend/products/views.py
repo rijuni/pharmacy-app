@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Category, Product
-from .serializers import CategorySerializer, ProductSerializer
+from .models import Category, Product, Review
+from .serializers import CategorySerializer, ProductSerializer, ReviewSerializer
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -29,6 +29,19 @@ class ProductViewSet(viewsets.ModelViewSet):
         else:
             permission_classes = [permissions.IsAdminUser]
         return [permission() for permission in permission_classes]
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
@@ -71,4 +84,65 @@ class ProductSearchView(APIView):
             
             from .serializers import ProductSerializer
             serializer = ProductSerializer(products[:20], many=True)
-            return Response(serializer.data)
+
+import json
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+
+class BulkProductUploadView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+    parser_classes = (MultiPartParser, FormParser)
+
+    def post(self, request, *args, **kwargs):
+        file_obj = request.data.get('file')
+        if not file_obj:
+            return Response({"error": "No file uploaded"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            data = json.load(file_obj)
+            if not isinstance(data, list):
+                return Response({"error": "Invalid format. Expected a list of products."}, status=status.HTTP_400_BAD_REQUEST)
+            
+            created_count = 0
+            updated_count = 0
+            
+            for item in data:
+                category_name = item.pop('category_name', None)
+                category = None
+                if category_name:
+                    category, _ = Category.objects.get_or_create(name=category_name)
+                
+                product_id = item.pop('id', None)
+                if product_id:
+                    # Update existing
+                    try:
+                        product = Product.objects.get(id=product_id)
+                        for key, value in item.items():
+                            setattr(product, key, value)
+                        if category:
+                            product.category = category
+                        product.save()
+                        updated_count += 1
+                    except Product.DoesNotExist:
+                        if category:
+                            item['category'] = category
+                        Product.objects.create(**item)
+                        created_count += 1
+                else:
+                    # Create new
+                    if category:
+                        item['category'] = category
+                    Product.objects.create(**item)
+                    created_count += 1
+            
+            return Response({
+                "message": f"Successfully processed {len(data)} items.",
+                "created": created_count,
+                "updated": updated_count
+            }, status=status.HTTP_201_CREATED)
+            
+        except json.JSONDecodeError:
+            return Response({"error": "Invalid JSON file."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

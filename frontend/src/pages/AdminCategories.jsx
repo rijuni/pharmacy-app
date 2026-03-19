@@ -11,6 +11,8 @@ const AdminCategories = () => {
         name: '',
         description: ''
     });
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
 
     useEffect(() => {
         fetchCategories();
@@ -35,23 +37,49 @@ const AdminCategories = () => {
                 name: category.name,
                 description: category.description || ''
             });
+            setImagePreview(category.image || null);
         } else {
             setEditingCategory(null);
             setFormData({
                 name: '',
                 description: ''
             });
+            setImagePreview(null);
         }
+        setImageFile(null);
         setIsModalOpen(true);
+    };
+
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const data = new FormData();
+        data.append('name', formData.name);
+        data.append('description', formData.description);
+        if (imageFile) {
+            data.append('image', imageFile);
+        }
+
         try {
+            const config = {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            };
+
             if (editingCategory) {
-                await api.put(`products/categories/${editingCategory.id}/`, formData);
+                await api.put(`products/categories/${editingCategory.id}/`, data, config);
             } else {
-                await api.post('products/categories/', formData);
+                await api.post('products/categories/', data, config);
             }
             setIsModalOpen(false);
             fetchCategories();
@@ -95,8 +123,12 @@ const AdminCategories = () => {
                 {categories.map((cat) => (
                     <div key={cat.id} className="glass-card p-8 rounded-[2.5rem] border border-slate-100 flex flex-col group hover:border-emerald-200 transition-all">
                         <div className="flex justify-between items-start mb-6">
-                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-                                <Tag size={24} />
+                            <div className="w-16 h-16 bg-slate-50 rounded-2xl overflow-hidden flex items-center justify-center border border-slate-100 shadow-inner">
+                                {cat.image ? (
+                                    <img src={cat.image} alt={cat.name} className="w-full h-full object-contain mix-blend-multiply" />
+                                ) : (
+                                    <Tag size={24} className="text-emerald-500" />
+                                )}
                             </div>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button onClick={() => handleOpenModal(cat)} className="p-2 hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 rounded-lg transition-all">
@@ -142,7 +174,29 @@ const AdminCategories = () => {
                             </button>
                         </div>
                         
-                        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+                        <form onSubmit={handleSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+                            {/* Image Upload Area */}
+                            <div className="flex justify-center mb-4">
+                                <div className="relative group">
+                                    <div className="w-32 h-32 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden">
+                                        {imagePreview ? (
+                                            <img src={imagePreview} alt="Preview" className="w-full h-full object-contain mix-blend-multiply" />
+                                        ) : (
+                                            <Tag size={40} className="text-slate-300" />
+                                        )}
+                                    </div>
+                                    <input 
+                                        type="file" 
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        className="absolute inset-0 opacity-0 cursor-pointer"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                                        <Plus className="text-white" size={24} />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Category Name</label>
                                 <input 

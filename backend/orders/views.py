@@ -155,7 +155,8 @@ class OrderViewSet(viewsets.ModelViewSet):
                 payment_status='completed' if payment_method in ['card', 'razorpay'] else 'pending',
                 stripe_payment_intent_id=request.data.get('payment_intent_id') if payment_method == 'card' else None,
                 razorpay_order_id=request.data.get('razorpay_order_id') if payment_method == 'razorpay' else None,
-                razorpay_payment_id=request.data.get('razorpay_payment_id') if payment_method == 'razorpay' else None
+                razorpay_payment_id=request.data.get('razorpay_payment_id') if payment_method == 'razorpay' else None,
+                razorpay_signature=request.data.get('razorpay_signature') if payment_method == 'razorpay' else None
             )
             
             # Create order items and reduce stock
@@ -295,6 +296,28 @@ def verify_razorpay_payment(request):
         return Response({'status': 'Payment verified'}, status=status.HTTP_200_OK)
     except Exception:
         return Response({'detail': 'Payment verification failed'}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAdminUser])
+def export_inventory_csv(request):
+    """Export product inventory to CSV"""
+    import csv
+    from django.http import HttpResponse
+    
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="inventory_report.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow(['ID', 'Name', 'Category', 'Price', 'Stock', 'Availability', 'Manufacturer'])
+    
+    products = Product.objects.all().select_related('category')
+    for p in products:
+        writer.writerow([
+            p.id, p.name, p.category.name if p.category else 'N/A', 
+            p.price, p.stock, p.availability_status, p.manufacturer
+        ])
+    
+    return response
 
 @api_view(['GET'])
 @permission_classes([permissions.IsAdminUser])

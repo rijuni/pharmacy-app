@@ -13,6 +13,7 @@ import StripePaymentForm from '../components/StripePaymentForm';
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 
 const CheckoutContent = () => {
+    const { user } = useSelector(state => state.auth);
     const { items, totalPrice } = useSelector(state => state.cart);
     const { isAuthenticated } = useSelector(state => state.auth);
     
@@ -61,6 +62,17 @@ const CheckoutContent = () => {
         }
 
         fetchAddresses();
+
+        // Load Razorpay script
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        script.onload = () => setRazorpayLoaded(true);
+        document.body.appendChild(script);
+
+        return () => {
+            document.body.removeChild(script);
+        };
     }, [isAuthenticated, items, navigate, dispatch, success]);
 
     const handleAddAddress = async (e) => {
@@ -82,6 +94,11 @@ const CheckoutContent = () => {
             return;
         }
 
+        if (!razorpayLoaded) {
+            setError("Razorpay SDK failed to load. Please check your connection.");
+            return;
+        }
+
         setIsProcessing(true);
         setError('');
 
@@ -95,9 +112,8 @@ const CheckoutContent = () => {
                 key: key_id,
                 amount: amount,
                 currency: currency,
-                name: "OmniCare Pharmacy",
-                description: "Purchase of medicines",
-                image: "https://your-favicon-link.com", // update this later
+                name: "HealthMeds Pharmacy",
+                description: "Purchase of medications",
                 order_id: order_id,
                 handler: async function (response) {
                     try {
@@ -119,9 +135,9 @@ const CheckoutContent = () => {
                     }
                 },
                 prefill: {
-                    name: "", // You can pull this from user state
-                    email: "",
-                    contact: ""
+                    name: user?.username || "", 
+                    email: user?.email || "",
+                    contact: user?.phone_number || ""
                 },
                 theme: {
                     color: "#0D9488"
@@ -173,8 +189,8 @@ const CheckoutContent = () => {
             setSuccess(true);
 
             setTimeout(() => {
-                navigate('/orders');
-            }, 3000);
+                navigate('/order-success');
+            }, 500);
         } catch (err) {
             if (err.response && err.response.data) {
                 setError(err.response.data.detail || "Order failed. Please check requirements.");
@@ -185,6 +201,7 @@ const CheckoutContent = () => {
             setIsProcessing(false);
         }
     };
+
 
     if (success) {
         return (

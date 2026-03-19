@@ -183,6 +183,9 @@ const Navbar = () => {
                         <Link to="/admin/inventory" onClick={() => setShowDropdown(false)} className="block px-4 py-2 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 font-bold border-t border-emerald-100/50">
                           Inventory Management
                         </Link>
+                        <Link to="/admin/categories" onClick={() => setShowDropdown(false)} className="block px-4 py-2 text-sm text-emerald-600 bg-emerald-50 hover:bg-emerald-100 font-bold border-t border-emerald-100/50">
+                          Category Management
+                        </Link>
                       </div>
                     )}
                     <button

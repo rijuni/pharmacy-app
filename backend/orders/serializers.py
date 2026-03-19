@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from .models import Cart, CartItem, Order, OrderItem, Prescription
 from products.serializers import ProductSerializer
+from users.models import Address
+from users.serializers import AddressSerializer
 
 class CartItemSerializer(serializers.ModelSerializer):
     product = ProductSerializer(read_only=True)
@@ -30,6 +32,10 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
+    address = AddressSerializer(read_only=True)
+    address_id = serializers.PrimaryKeyRelatedField(
+        queryset=Address.objects.all(), source='address', write_only=True
+    )
     address_details = serializers.SerializerMethodField()
     
     class Meta:

@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import ProductCard from '../components/ProductCard';
+import { ProductCardSkeleton } from '../components/Skeleton';
 import { Filter } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 const Medicines = () => {
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const initialCategory = queryParams.get('category') || '';
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Filters
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -116,18 +122,20 @@ const Medicines = () => {
         </div>
 
         {loading ? (
-          <div className="flex justify-center items-center h-48">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-brand-500"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
           </div>
         ) : error ? (
-          <div className="text-center py-16 bg-rose-50 rounded-xl border-2 border-dashed border-rose-200">
-            <h3 className="text-xl font-bold text-rose-700 mb-2">Service Temporarily Unavailable</h3>
-            <p className="text-rose-600 mb-4">{error}</p>
+          <div className="text-center py-20 bg-rose-50/50 rounded-[3rem] border-2 border-dashed border-rose-100 flex flex-col items-center">
+            <h3 className="text-2xl font-black text-rose-900 mb-2 italic tracking-tighter uppercase">Service Interrupted</h3>
+            <p className="text-rose-600 font-medium italic mb-8 mb-6">{error}</p>
             <button 
               onClick={() => window.location.reload()}
-              className="bg-rose-500 text-white px-6 py-2 rounded-lg font-bold hover:bg-rose-600 transition-colors"
+              className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-black transition-all shadow-xl shadow-slate-200"
             >
-              Refresh Page
+              Restart Session
             </button>
           </div>
         ) : products.length > 0 ? (

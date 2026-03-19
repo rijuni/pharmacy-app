@@ -10,12 +10,15 @@ import Prescriptions from './pages/Prescriptions';
 import Profile from './pages/Profile';
 import ProductDetails from './pages/ProductDetails';
 import Checkout from './pages/Checkout';
+import OrderSuccess from './pages/OrderSuccess';
 import Search from './pages/Search';
 import Orders from './pages/Orders';
 import AdminPrescriptions from './pages/AdminPrescriptions';
 import AdminOrders from './pages/AdminOrders';
 import AdminAnalytics from './pages/AdminAnalytics';
 import AdminInventory from './pages/AdminInventory';
+import AdminCategories from './pages/AdminCategories';
+import OrderTracking from './pages/OrderTracking';
 import ProtectedRoute from './components/ProtectedRoute';
 
 const AnimatedRoutes = () => {
@@ -38,15 +41,19 @@ const AnimatedRoutes = () => {
           
           {/* User Routes (Protected) */}
           <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
+          <Route path="/order-success" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
           <Route path="/prescriptions" element={<ProtectedRoute><Prescriptions /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+          <Route path="/order-tracking/:id" element={<ProtectedRoute><OrderTracking /></ProtectedRoute>} />
+
           
           {/* Admin Routes (Staff Managed) */}
           <Route path="/admin/prescriptions" element={<ProtectedRoute adminOnly={true}><AdminPrescriptions /></ProtectedRoute>} />
           <Route path="/admin/orders" element={<ProtectedRoute adminOnly={true}><AdminOrders /></ProtectedRoute>} />
           <Route path="/admin/analytics" element={<ProtectedRoute adminOnly={true}><AdminAnalytics /></ProtectedRoute>} />
           <Route path="/admin/inventory" element={<ProtectedRoute adminOnly={true}><AdminInventory /></ProtectedRoute>} />
+          <Route path="/admin/categories" element={<ProtectedRoute adminOnly={true}><AdminCategories /></ProtectedRoute>} />
         </Routes>
       </motion.div>
     </AnimatePresence>

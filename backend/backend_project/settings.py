@@ -26,12 +26,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-w&ygsn@4*e5-w9_2wnl@t$6hl07%tk0jdbfbvid1v8h@au=8b8'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-w&ygsn@4*e5-w9_2wnl@t$6hl07%tk0jdbfbvid1v8h@au=8b8')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',')]
 
 
 # Application definition
@@ -177,10 +177,14 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 # Meilisearch configuration
-MEILISEARCH_HOST = 'http://localhost:7700'
-MEILISEARCH_API_KEY = 'masterKey' # Default for local dev
+MEILISEARCH_HOST = os.getenv('MEILISEARCH_HOST', 'http://localhost:7700')
+MEILISEARCH_API_KEY = os.getenv('MEILISEARCH_API_KEY', 'masterKey')
 
 # Razorpay configuration
 RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID', 'rzp_test_YourKeyHere')
 RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET', 'YourSecretHere')
+
+# Email configuration
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'support@healthmeds.com'
 

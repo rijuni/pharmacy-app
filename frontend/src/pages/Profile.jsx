@@ -16,13 +16,13 @@ const Profile = () => {
 
    // New Address Form State
    const [showAddressForm, setShowAddressForm] = useState(false);
+   const [editingAddress, setEditingAddress] = useState(null);
    const [newAddress, setNewAddress] = useState({
-      street_address: '',
+      street: '',
       city: '',
       state: '',
-      postal_code: '',
-      latitude: '',
-      longitude: ''
+      zip_code: '',
+      is_default: false
    });
 
    useEffect(() => {
@@ -58,21 +58,51 @@ const Profile = () => {
    const handleAddressSubmit = async (e) => {
       e.preventDefault();
       try {
-         const res = await api.post('users/addresses/', newAddress);
-         setAddresses([...addresses, res.data]);
+         if (editingAddress) {
+            const res = await api.put(`users/addresses/${editingAddress.id}/`, newAddress);
+            setAddresses(addresses.map(a => a.id === editingAddress.id ? res.data : a));
+            setEditingAddress(null);
+         } else {
+            const res = await api.post('users/addresses/', newAddress);
+            setAddresses([...addresses, res.data]);
+         }
          setShowAddressForm(false);
-         setNewAddress({street_address: '', city: '', state: '', postal_code: '', latitude: '', longitude: ''});
+         setNewAddress({ street: '', city: '', state: '', zip_code: '', is_default: false });
       } catch {
-         alert("Error adding address. Please ensure latitude and longitude are valid numbers.");
+         alert("Error saving address.");
       }
+   };
+
+   const handleAddressDelete = async (id) => {
+      if (window.confirm("Delete this address?")) {
+         try {
+            await api.delete(`users/addresses/${id}/`);
+            setAddresses(addresses.filter(a => a.id !== id));
+         } catch {
+            alert("Error deleting address.");
+         }
+      }
+   };
+
+   const handleEditAddress = (addr) => {
+      setEditingAddress(addr);
+      setNewAddress({
+         street: addr.street,
+         city: addr.city,
+         state: addr.state,
+         zip_code: addr.zip_code,
+         is_default: addr.is_default
+      });
+      setShowAddressForm(true);
    };
 
    if (!user) return null;
 
    return (
       <div className="flex flex-col md:flex-row gap-6">
-         {/* Sidebar */}
+         {/* Sidebar ... (omitted for brevity) */}
          <aside className="w-full md:w-64 shrink-0">
+            {/* Same sidebar as before */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                <div className="bg-brand-50 p-6 flex flex-col items-center">
                   <div className="bg-brand-500 text-white rounded-full p-4 mb-3">
@@ -132,9 +162,12 @@ const Profile = () => {
                                        <span className="text-xs text-gray-500 font-bold uppercase tracking-wider">Order #{order.id}</span>
                                        <p className="text-sm text-gray-600">{new Date(order.created_at).toLocaleDateString()}</p>
                                     </div>
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-                                       {order.status.replace('_', ' ')}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                       <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${order.status === 'delivered' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
+                                          {order.status.replace('_', ' ')}
+                                       </span>
+                                       <button onClick={() => navigate(`/order-tracking/${order.id}`)} className="text-brand-600 hover:underline text-xs font-bold">Track Order</button>
+                                    </div>
                                  </div>
                                  <div className="space-y-2 mb-4">
                                     {order.items.map(item => (
@@ -159,7 +192,7 @@ const Profile = () => {
                   <div>
                      <div className="flex justify-between items-center mb-6">
                         <h2 className="text-2xl font-bold text-gray-900">Manage Addresses</h2>
-                        <button onClick={() => setShowAddressForm(!showAddressForm)} className="bg-brand-50 text-brand-600 hover:bg-brand-100 px-4 py-2 flex items-center gap-2 rounded-lg font-bold transition-colors">
+                        <button onClick={() => {setShowAddressForm(!showAddressForm); setEditingAddress(null); setNewAddress({street: '', city: '', state: '', zip_code: '', is_default: false})}} className="bg-brand-50 text-brand-600 hover:bg-brand-100 px-4 py-2 flex items-center gap-2 rounded-lg font-bold transition-colors">
                            <Plus size={18} /> Add New
                         </button>
                      </div>
@@ -168,7 +201,7 @@ const Profile = () => {
                         <form onSubmit={handleAddressSubmit} className="bg-gray-50 p-6 rounded-lg border border-gray-200 mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
                            <div className="col-span-2">
                               <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Street Address</label>
-                              <input type="text" required value={newAddress.street_address} onChange={e => setNewAddress({...newAddress, street_address: e.target.value})} className="w-full border-gray-300 rounded p-2 focus:ring-brand-500 focus:border-brand-500" />
+                              <input type="text" required value={newAddress.street} onChange={e => setNewAddress({...newAddress, street: e.target.value})} className="w-full border-gray-300 rounded p-2 focus:ring-brand-500 focus:border-brand-500" />
                            </div>
                            <div>
                               <label className="block text-xs font-bold text-gray-700 uppercase mb-1">City</label>
@@ -179,26 +212,12 @@ const Profile = () => {
                               <input type="text" required value={newAddress.state} onChange={e => setNewAddress({...newAddress, state: e.target.value})} className="w-full border-gray-300 rounded p-2 focus:ring-brand-500 focus:border-brand-500" />
                            </div>
                            <div>
-                              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Postal Code</label>
-                              <input type="text" required value={newAddress.postal_code} onChange={e => setNewAddress({...newAddress, postal_code: e.target.value})} className="w-full border-gray-300 rounded p-2 focus:ring-brand-500 focus:border-brand-500" />
-                           </div>
-                           <div className="col-span-2 grid grid-cols-2 gap-4 mt-2 bg-blue-50 border border-blue-100 p-4 rounded text-blue-900 text-sm">
-                              <div className="col-span-2 flex items-start gap-2 mb-2">
-                                 <MapPin size={18} className="shrink-0 mt-0.5" />
-                                 <p className="font-medium">For MVP Geofencing: You must manually provide exact GPS Coordinates. Hospital is located at [28.6139, 77.2090]. Address must be within 3km of this to successfully place orders.</p>
-                              </div>
-                              <div>
-                                 <label className="block text-xs font-bold uppercase mb-1">Latitude</label>
-                                 <input type="number" step="any" required value={newAddress.latitude} onChange={e => setNewAddress({...newAddress, latitude: e.target.value})} className="w-full border-gray-300 rounded p-2" placeholder="e.g. 28.6250" />
-                              </div>
-                              <div>
-                                 <label className="block text-xs font-bold uppercase mb-1">Longitude</label>
-                                 <input type="number" step="any" required value={newAddress.longitude} onChange={e => setNewAddress({...newAddress, longitude: e.target.value})} className="w-full border-gray-300 rounded p-2" placeholder="e.g. 77.2150" />
-                              </div>
+                              <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Zip Code</label>
+                              <input type="text" required value={newAddress.zip_code} onChange={e => setNewAddress({...newAddress, zip_code: e.target.value})} className="w-full border-gray-300 rounded p-2 focus:ring-brand-500 focus:border-brand-500" />
                            </div>
                            <div className="col-span-2 mt-4 flex justify-end gap-3">
                               <button type="button" onClick={() => setShowAddressForm(false)} className="px-4 py-2 font-medium text-gray-600 hover:bg-gray-200 rounded">Cancel</button>
-                              <button type="submit" className="bg-brand-500 text-white px-6 py-2 rounded font-bold hover:bg-brand-600 transition-colors">Save Address</button>
+                              <button type="submit" className="bg-brand-500 text-white px-6 py-2 rounded font-bold hover:bg-brand-600 transition-colors uppercase text-xs tracking-widest">{editingAddress ? 'Update' : 'Save'} Address</button>
                            </div>
                         </form>
                      )}
@@ -208,12 +227,17 @@ const Profile = () => {
                      ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                            {addresses.map(addr => (
-                              <div key={addr.id} className="border border-gray-200 rounded-lg p-5 flex items-start gap-3">
-                                 <MapPin className="text-gray-400 mt-1" size={24} />
-                                 <div>
-                                    <h4 className="font-bold text-gray-900">{addr.street_address}</h4>
-                                    <p className="text-sm text-gray-600">{addr.city}, {addr.state} - {addr.postal_code}</p>
-                                    <p className="text-xs text-gray-400 mt-2 font-mono">Lat: {addr.latitude}, Lng: {addr.longitude}</p>
+                              <div key={addr.id} className="border border-gray-200 rounded-lg p-5 flex flex-col gap-3">
+                                 <div className="flex items-start gap-3">
+                                    <MapPin className="text-brand-500 mt-1" size={20} />
+                                    <div className="flex-1">
+                                       <h4 className="font-bold text-gray-900">{addr.street}</h4>
+                                       <p className="text-sm text-gray-600">{addr.city}, {addr.state} - {addr.zip_code}</p>
+                                    </div>
+                                 </div>
+                                 <div className="flex justify-end gap-2 pt-2 border-t border-gray-50">
+                                    <button onClick={() => handleEditAddress(addr)} className="text-brand-600 font-bold text-xs uppercase p-2 hover:bg-brand-50 rounded">Edit</button>
+                                    <button onClick={() => handleAddressDelete(addr.id)} className="text-red-600 font-bold text-xs uppercase p-2 hover:bg-red-50 rounded">Delete</button>
                                  </div>
                               </div>
                            ))}

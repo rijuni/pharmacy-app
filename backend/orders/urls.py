@@ -4,7 +4,7 @@ from .views import (
     get_cart, add_to_cart, remove_from_cart, OrderViewSet, 
     PrescriptionViewSet, create_payment_intent, 
     create_razorpay_order, verify_razorpay_payment,
-    get_admin_reports
+    get_admin_reports, export_inventory_csv
 )
 
 router = DefaultRouter()
@@ -19,5 +19,6 @@ urlpatterns = [
     path('payment/razorpay-order/', create_razorpay_order, name='create_razorpay_order'),
     path('payment/verify-razorpay/', verify_razorpay_payment, name='verify_razorpay_payment'),
     path('reports/', get_admin_reports, name='admin_reports'),
+    path('reports/export-inventory/', export_inventory_csv, name='export_inventory_csv'),
     path('', include(router.urls)),
 ]

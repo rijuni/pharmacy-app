@@ -9,6 +9,8 @@ const AdminInventory = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
     
     // Notification state
     const [notification, setNotification] = useState(null);
@@ -62,8 +64,11 @@ const AdminInventory = () => {
     };
 
     const handleOpenModal = (product = null) => {
+        setImageFile(null);
+        setImagePreview(null);
         if (product) {
             setEditingProduct(product);
+            if (product.image) setImagePreview(product.image);
             // Handle both object and ID formats for category
             let catId = '';
             if (product.category) {
@@ -92,14 +97,49 @@ const AdminInventory = () => {
         setIsModalOpen(true);
     };
 
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
         try {
+            const data = new FormData();
+            
+            // Append all form fields to FormData
+            Object.keys(formData).forEach(key => {
+                if (key === 'image' || key === 'category_name' || key === 'is_available' || key === 'substitutes' || key === 'created_at' || key === 'updated_at') return;
+                
+                // If it's a nested object (like category), just send the ID
+                let value = formData[key];
+                if (key === 'category' && typeof value === 'object') value = value.id;
+                
+                data.append(key, value);
+            });
+
+            // Only append image if a new file was selected
+            if (imageFile) {
+                data.append('image', imageFile);
+            }
+
+            const config = {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            };
+
             if (editingProduct) {
-                await api.put(`products/products/${editingProduct.id}/`, formData);
+                await api.put(`products/products/${editingProduct.id}/`, data, config);
                 showNotification(`"${formData.name}" updated successfully!`);
             } else {
-                await api.post('products/products/', formData);
+                await api.post('products/products/', data, config);
                 showNotification(`"${formData.name}" added to inventory!`);
             }
             setIsModalOpen(false);
@@ -370,8 +410,36 @@ const AdminInventory = () => {
                                     )}
                                 </div>
                                 <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Product Image</label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-20 h-20 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden">
+                                            {imagePreview ? (
+                                                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Package size={24} className="text-slate-300" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleImageChange}
+                                                className="hidden"
+                                                id="product-image"
+                                            />
+                                            <label
+                                                htmlFor="product-image"
+                                                className="inline-block px-4 py-2 bg-brand-50 text-brand-600 rounded-xl font-bold text-xs cursor-pointer hover:bg-brand-100 transition-colors"
+                                            >
+                                                {imagePreview ? 'Change Image' : 'Select Image'}
+                                            </label>
+                                            <p className="text-[10px] text-slate-400 font-medium mt-1">PNG, JPG up to 5MB</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Price (₹)</label>
-                                    <input 
+                                    <input
                                         required
                                         type="number"
                                         step="0.01"
@@ -407,12 +475,46 @@ const AdminInventory = () => {
                             <div className="mt-6 space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Description</label>
                                 <textarea 
-                                    rows="3"
+                                    rows="2"
                                     value={formData.description}
                                     onChange={(e) => setFormData({...formData, description: e.target.value})}
                                     className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 ring-brand-500 font-bold text-slate-700 outline-none resize-none"
+                                    placeholder="Product description and usage instructions..."
                                 ></textarea>
                             </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Manufacturer (Brand)</label>
+                                        <input
+                                            type="text"
+                                            value={formData.manufacturer}
+                                            onChange={(e) => setFormData({...formData, manufacturer: e.target.value})}
+                                            className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 ring-brand-500 font-bold text-slate-700 outline-none"
+                                            placeholder="e.g. Cipla, GSK"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Strength</label>
+                                        <input
+                                            type="text"
+                                            value={formData.strength}
+                                            onChange={(e) => setFormData({...formData, strength: e.target.value})}
+                                            className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 ring-brand-500 font-bold text-slate-700 outline-none"
+                                            placeholder="e.g. 500mg"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Form</label>
+                                        <input
+                                            type="text"
+                                            value={formData.form}
+                                            onChange={(e) => setFormData({...formData, form: e.target.value})}
+                                            className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 ring-brand-500 font-bold text-slate-700 outline-none"
+                                            placeholder="e.g. Tablet, Syrup"
+                                        />
+                                    </div>
+                                </div>
 
                             <div className="mt-8 flex items-center gap-4 p-4 bg-slate-50 rounded-2xl">
                                 <input 

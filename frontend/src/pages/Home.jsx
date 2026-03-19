@@ -1,27 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ShieldCheck, Truck, RefreshCw, PhoneCall, ArrowRight, Activity, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProductCard from '../components/ProductCard';
 import ThreeScene from '../components/ThreeScene';
+import api from '../api/axios';
 
 const Home = () => {
    // Dummy featured products to show on home page
    const featuredMedicines = [
-      { id: 1, name: 'Amoxicillin 500mg', generic_name: 'Amoxicillin', image: '', price: 150.00, discount_price: 120.00, requires_prescription: true },
-      { id: 2, name: 'Paracetamol 650mg', generic_name: 'Paracetamol', image: '', price: 40.00, discount_price: 35.00, requires_prescription: false },
-      { id: 3, name: 'Vitamin C Zinc', generic_name: 'Ascorbic Acid', image: '', price: 180.00, discount_price: 150.00, requires_prescription: false },
-      { id: 4, name: 'Ibuprofen 400mg', generic_name: 'Ibuprofen', image: '', price: 80.00, discount_price: 70.00, requires_prescription: false },
+      { id: 1, name: 'Amoxicillin 500mg', generic_name: 'Amoxicillin', manufacturer: 'Cipla Ltd', image: '', price: 150.00, discount_price: 120.00, requires_prescription: true, is_available: true },
+      { id: 2, name: 'Paracetamol 650mg', generic_name: 'Paracetamol', manufacturer: 'GSK Pharma', image: '', price: 40.00, discount_price: 35.00, requires_prescription: false, is_available: true },
+      { id: 3, name: 'Vitamin C Zinc', generic_name: 'Ascorbic Acid', manufacturer: 'Abbott', image: '', price: 180.00, discount_price: 150.00, requires_prescription: false, is_available: true },
+      { id: 4, name: 'Ibuprofen 400mg', generic_name: 'Ibuprofen', manufacturer: 'Sun Pharma', image: '', price: 80.00, discount_price: 70.00, requires_prescription: false, is_available: true },
    ];
 
-   const healthConcerns = [
-      { name: 'Diabetes Care', img: 'https://onemg.gumlet.io/a_ignore,w_150,h_150,c_fit,q_auto,f_auto/c2a0598f-483c-48ff-9783-71e402aa28d3.png' },
-      { name: 'Cardiac Care', img: 'https://onemg.gumlet.io/a_ignore,w_150,h_150,c_fit,q_auto,f_auto/ab1da5f4-c074-47d2-b278-a5fbd2c93f1f.png' },
-      { name: 'Stomach Care', img: 'https://onemg.gumlet.io/a_ignore,w_150,h_150,c_fit,q_auto,f_auto/702457a8-ff7d-43a6-bd1d-6bcb278ce686.png' },
-      { name: 'Liver Care', img: 'https://onemg.gumlet.io/a_ignore,w_150,h_150,c_fit,q_auto,f_auto/baa97676-e0f3-4cb7-adc8-422ce4afda4b.png' },
-      { name: 'Bone, Joint', img: 'https://onemg.gumlet.io/a_ignore,w_150,h_150,c_fit,q_auto,f_auto/a54b3586-eac3-4a1e-abf6-7b2ced201460.png' },
-      { name: 'Kidney Care', img: 'https://onemg.gumlet.io/a_ignore,w_150,h_150,c_fit,q_auto,f_auto/f44053e1-e630-4e35-ae23-1440d9df8bc4.png' }
-   ];
+   const [categories, setCategories] = useState([]);
+
+   useEffect(() => {
+      const fetchCategories = async () => {
+         try {
+            const res = await api.get('products/categories/');
+            const data = res.data.results || res.data;
+            setCategories(Array.isArray(data) ? data : []);
+         } catch (err) {
+            console.error("Failed to fetch categories", err);
+         }
+      };
+
+
+      fetchCategories();
+   }, []);
+
+   const getImageUrl = (imagePath) => {
+      if (!imagePath) return "https://via.placeholder.com/150?text=Health";
+      if (imagePath.startsWith('http')) return imagePath;
+      return `http://localhost:8000${imagePath}`;
+   };
+
+   const getCategoryIcon = (name) => {
+      const n = name.toLowerCase();
+      if (n.includes('pain')) return <Activity className="text-rose-500" />;
+      if (n.includes('antibiotic')) return <Zap className="text-amber-500" />;
+      if (n.includes('cold') || n.includes('cough')) return <Activity className="text-blue-500" />;
+      if (n.includes('digest')) return <Activity className="text-emerald-500" />;
+      if (n.includes('heart')) return <Activity className="text-red-500" />;
+      if (n.includes('diabetes')) return <Activity className="text-orange-500" />;
+      if (n.includes('vitamin')) return <Zap className="text-yellow-500" />;
+      if (n.includes('skin')) return <Activity className="text-pink-500" />;
+      return <Activity className="text-brand-500" />;
+   };
 
    return (
       <div className="space-y-12 pb-12">
@@ -108,17 +136,24 @@ const Home = () => {
             <div className="flex justify-between items-end mb-6">
                <h3 className="text-2xl font-bold text-gray-900">Shop by Health Concerns</h3>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-               {healthConcerns.map((concern, idx) => (
-                  <Link key={idx} to="/medicines" className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 hover:border-brand-300 hover:shadow-md transition-all text-center flex flex-col items-center gap-3">
-                     <div className="h-20 w-20 bg-gray-50 rounded-full p-2 flex items-center justify-center">
-                        <img src={concern.img} alt={concern.name} className="max-w-full mix-blend-multiply" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+               {categories.map((cat) => (
+                  <Link key={cat.id} to={`/medicines?category=${cat.id}`} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 hover:border-brand-300 hover:shadow-xl hover:shadow-brand-500/5 transition-all text-center flex flex-col items-center gap-4 group">
+                     <div className="h-20 w-20 bg-slate-50 group-hover:bg-brand-50 rounded-full flex items-center justify-center overflow-hidden transition-colors">
+                        {cat.image ? (
+                           <img src={getImageUrl(cat.image)} alt={cat.name} className="max-w-[70%] h-full object-contain mix-blend-multiply" />
+                        ) : (
+                           <div className="scale-150">
+                              {getCategoryIcon(cat.name)}
+                           </div>
+                        )}
                      </div>
-                     <span className="font-semibold text-gray-700 text-sm">{concern.name}</span>
+                     <span className="font-bold text-slate-700 text-sm group-hover:text-brand-600 transition-colors line-clamp-1">{cat.name}</span>
                   </Link>
                ))}
             </div>
          </section>
+
 
          {/* Trending Products */}
          <section>
