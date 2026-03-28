@@ -1,26 +1,26 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getAuth } from "firebase/auth";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp } from 'firebase/app';
+import { getAnalytics } from 'firebase/analytics';
+import { getAuth } from 'firebase/auth';
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyDDjAc9lHSzwBcPG0drtPUzkVCbMvAvdsk",
-  authDomain: "pharmacy-app-ed68f.firebaseapp.com",
-  projectId: "pharmacy-app-ed68f",
-  storageBucket: "pharmacy-app-ed68f.firebasestorage.app",
-  messagingSenderId: "834620940680",
-  appId: "1:834620940680:web:9a875cb68aea8cc252da3d",
-  measurementId: "G-3MXZTDC63J"
+  apiKey: "AIzaSyAgu2aZyN0wo1qTU9eAY55mwzpAAntgI8c",
+  authDomain: "pharmacy-app-21285.firebaseapp.com",
+  projectId: "pharmacy-app-21285",
+  storageBucket: "pharmacy-app-21285.firebasestorage.app",
+  messagingSenderId: "995877836813",
+  appId: "1:995877836813:web:47927acff095fff3419d44",
+  measurementId: "G-4F4MTJFGDQ"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-
-// Export Auth for Phone Verification
 export const auth = getAuth(app);
-auth.languageCode = 'en'; // Force English
+
+
+// Analytics (optional — only works in production, silently skipped in dev)
+try {
+  getAnalytics(app);
+} catch (_) {
+  // Analytics not supported in this environment
+}
+
+export default app;

@@ -18,12 +18,17 @@ const authSlice = createSlice({
       state.isAuthModalOpen = false;
       sessionStorage.setItem('access_token', action.payload.token);
       sessionStorage.setItem('user', JSON.stringify(action.payload.user));
+      // Store refresh token if provided
+      if (action.payload.refresh) {
+        sessionStorage.setItem('refresh_token', action.payload.refresh);
+      }
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
       sessionStorage.removeItem('access_token');
+      sessionStorage.removeItem('refresh_token');
       sessionStorage.removeItem('user');
     },
     openAuthModal: (state) => {

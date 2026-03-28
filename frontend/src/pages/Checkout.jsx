@@ -125,17 +125,19 @@ const CheckoutContent = () => {
                         });
 
                         // 4. Place actual order in DB
+                        // Pass skipProcessing=true so handlePlaceOrder doesn't toggle isProcessing again
                         await handlePlaceOrder(null, {
                             razorpay_order_id: order_id,
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_signature: response.razorpay_signature,
-                        });
+                        }, true);
                     } catch (err) {
                         setError("Payment verification failed. Please contact support.");
+                        setIsProcessing(false);
                     }
                 },
                 prefill: {
-                    name: user?.username || "", 
+                    name: user?.username || "",
                     email: user?.email || "",
                     contact: user?.phone_number || ""
                 },
@@ -157,13 +159,16 @@ const CheckoutContent = () => {
         }
     };
 
-    const handlePlaceOrder = async (stripePaymentId = null, razorpayData = null) => {
+    const handlePlaceOrder = async (stripePaymentId = null, razorpayData = null, skipProcessing = false) => {
         if (!selectedAddress) {
             setError("Please select a delivery address");
             return;
         }
 
-        setIsProcessing(true);
+        // Only toggle isProcessing if we are not already in a Razorpay callback flow
+        if (!skipProcessing) {
+            setIsProcessing(true);
+        }
         setError('');
 
         try {

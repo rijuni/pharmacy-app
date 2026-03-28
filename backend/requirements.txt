@@ -9,3 +9,4 @@ tzdata==2025.3
 meilisearch==0.40.0
 razorpay==2.0.1
 stripe==14.4.1
+python-dotenv==1.0.0

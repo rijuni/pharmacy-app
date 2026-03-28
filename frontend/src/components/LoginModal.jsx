@@ -1,54 +1,66 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginSuccess, closeAuthModal } from '../store/authSlice';
 import api from '../api/axios';
-import { ShieldCheck, CheckCircle, X, Smartphone, ArrowRight } from 'lucide-react';
+import { ShieldCheck, CheckCircle, X, Smartphone, ArrowRight, RefreshCw } from 'lucide-react';
+import { RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth';
 import { auth } from '../firebase';
-import { RecaptchaVerifier, signInWithPhoneNumber } from "firebase/auth";
 
 const LoginModal = () => {
   const { isAuthModalOpen } = useSelector(state => state.auth);
   const dispatch = useDispatch();
-  const recaptchaRef = useRef(null);
 
   const [isLogin, setIsLogin] = useState(true);
   const [isOtpStep, setIsOtpStep] = useState(false);
+
+  // Form fields
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
-  
-  const [confirmationResult, setConfirmationResult] = useState(null);
+
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  // Initialize ReCAPTCHA
-  useEffect(() => {
-    if (isAuthModalOpen && !isLogin && !isOtpStep) {
-      // Small delay to ensure the DOM element exists if visible
-      setTimeout(() => {
-        if (!window.recaptchaVerifier && document.getElementById('recaptcha-container')) {
-           window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            'size': 'invisible',
-            'callback': (response) => {
-               // reCAPTCHA solved, allow signInWithPhoneNumber.
-            }
-          });
-        }
-      }, 500);
-    }
-    return () => {
-       if (window.recaptchaVerifier) {
-          window.recaptchaVerifier.clear();
-          window.recaptchaVerifier = null;
-       }
-    };
-  }, [isAuthModalOpen, isLogin, isOtpStep]);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [confirmationResult, setConfirmationResult] = useState(null);
 
   if (!isAuthModalOpen) return null;
 
+  // ─── Resend cooldown ────────────────────────────────────────────────────────
+  const startCooldown = (seconds = 60) => {
+    setResendCooldown(seconds);
+    const iv = setInterval(() => {
+      setResendCooldown(prev => {
+        if (prev <= 1) { clearInterval(iv); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) return;
+    setError(null);
+    setSuccessMsg('');
+    try {
+      if (!window.recaptchaVerifier) {
+        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible',
+        });
+      }
+      const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+      const result = await signInWithPhoneNumber(auth, formattedPhone, window.recaptchaVerifier);
+      setConfirmationResult(result);
+      setSuccessMsg('New OTP sent to your phone via Firebase.');
+      startCooldown();
+    } catch (err) {
+      console.error(err);
+      setError('Failed to resend OTP. Please try again.');
+    }
+  };
+
+  // ─── Main submit ────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -56,199 +68,352 @@ const LoginModal = () => {
     setIsLoading(true);
 
     try {
+      // ── 1. LOGIN ────────────────────────────────────────────────────────────
       if (isLogin) {
-        // Login Flow
-        const response = await api.post('users/login/', { username, password });
-        
-        const userResponse = await api.get('users/profile/', {
-          headers: { Authorization: `Bearer ${response.data.access}` }
+        const res = await api.post('users/login/', { username, password });
+        const profile = await api.get('users/profile/', {
+          headers: { Authorization: `Bearer ${res.data.access}` },
         });
-
         dispatch(loginSuccess({
-          user: userResponse.data,
-          token: response.data.access
+          user: profile.data,
+          token: res.data.access,
+          refresh: res.data.refresh,
         }));
         dispatch(closeAuthModal());
-      } else {
-        if (isOtpStep) {
-          // Verify OTP Flow (Still here if user manually enters this state, but normally bypassed)
-          await api.post('users/verify-otp/', { 
-            username, 
-            otp_code: otpCode 
-          });
-          setSuccessMsg("Mobile verified successfully! You can now log in.");
+
+        // ── 2. VERIFY OTP ───────────────────────────────────────────────────────
+      } else if (isOtpStep) {
+        if (!confirmationResult) {
+          setError('No OTP session found. Please try registering again.');
+          setIsLoading(false);
+          return;
+        }
+
+        await confirmationResult.confirm(otpCode);
+
+        // After successful Firebase phone verify, register the user to backend
+        // Backend handles creating the user and marks is_verified=True automatically now
+        await api.post('users/register/', {
+          username,
+          password,
+          email: email || undefined,
+          phone_number: phone,
+        });
+
+        setSuccessMsg('✅ Phone verified! Redirecting to login…');
+        setTimeout(() => {
           setIsOtpStep(false);
           setIsLogin(true);
-          setPassword('');
-        } else {
-          // Registration Flow
-          await api.post('users/register/', { 
-             username, 
-             password, 
-             email, 
-             phone_number: phone 
-          });
-          
-          // BYPASSED for development:
-          // const appVerifier = window.recaptchaVerifier;
-          // const confirmation = await signInWithPhoneNumber(auth, phone, appVerifier);
-          // setConfirmationResult(confirmation);
-          
-          setSuccessMsg("Account created with Auto-Verification (Dev)! Please log in.");
-          setIsLogin(true);
-          setPassword('');
-          // setIsOtpStep(true); 
+          setOtpCode('');
+          setSuccessMsg('');
+        }, 1500);
+
+        // ── 3. REGISTER ─────────────────────────────────────────────────────────
+      } else {
+        // Phone is required
+        if (!phone.trim()) {
+          setError('Phone number is required for OTP verification.');
+          setIsLoading(false);
+          return;
         }
+
+        // Validate phone number length (must be at least 10 digits + country code)
+        const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+        if (formattedPhone.length < 12) {
+          setError('Please enter a valid phone number with country code (e.g., +919876543210).');
+          setIsLoading(false);
+          return;
+        }
+
+        // --- DEVELOPMENT BYPASS ---
+        // Bypassing Firebase OTP so you can test the rest of the application.
+        // This directly creates the user in the backend.
+        
+        await api.post('users/register/', {
+          username,
+          password,
+          email: email || undefined,
+          phone_number: formattedPhone,
+        });
+
+        setSuccessMsg('✅ Account created successfully! Redirecting to login…');
+        setTimeout(() => {
+          setIsOtpStep(false);
+          setIsLogin(true);
+          setOtpCode('');
+          setSuccessMsg('');
+        }, 1500);
+        // --- END DEVELOPMENT BYPASS ---
       }
+
     } catch (err) {
-       console.error("Auth Error:", err);
-       if (err.response && err.response.data) {
-          const firstKey = Object.keys(err.response.data)[0];
-          const errItem = err.response.data[firstKey];
-          setError(Array.isArray(errItem) ? errItem[0] : (err.response.data.detail || "Verification failed"));
-       } else if (err.code === 'auth/invalid-phone-number') {
-          setError("Invalid phone number format (use +91XXXXXXXXXX)");
-       } else {
-          setError(isLogin ? "Invalid credentials. Please try again." : (err.message || "Action failed"));
-       }
+      console.error('Auth error:', err);
+      
+      // Clear reCAPTCHA if it failed so the user can try again
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
+
+      if (err.code === 'auth/invalid-app-credential') {
+         setError('Firebase setup error: Please ensure "reCAPTCHA Enterprise API" is enabled in Google Cloud Console for this project and "localhost" is an authorized domain.');
+         return;
+      }
+
+      const data = err.response?.data;
+      if (data?.detail) {
+        setError(data.detail);
+      } else if (data) {
+        const key = Object.keys(data)[0];
+        const val = data[key];
+        setError(Array.isArray(val) ? val[0] : String(val));
+      } else {
+        setError(isLogin ? 'Invalid credentials.' : (err.message || 'Something went wrong.'));
+      }
     } finally {
-       setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
   const closeModal = () => {
-     dispatch(closeAuthModal());
-     setIsOtpStep(false);
-     setIsLogin(true);
+    dispatch(closeAuthModal());
+    setIsOtpStep(false);
+    setIsLogin(true);
+    setError(null);
+    setSuccessMsg('');
+    setOtpCode('');
   };
+
+  // ─── Derived UI labels ──────────────────────────────────────────────────────
+  const heading = isOtpStep ? 'Verify Mobile' : isLogin ? 'Welcome Back' : 'Create Account';
+  const subtext = isOtpStep
+    ? `Enter the 6-digit code sent to ${phone || 'your number'}`
+    : isLogin
+      ? 'Secure access to your health data.'
+      : "Enter your mobile — we'll send an OTP to verify.";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-       <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={closeModal}></div>
-       
-       <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          <button onClick={closeModal} className="absolute top-6 right-6 text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors z-10">
-             <X size={20} />
-          </button>
+      <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={closeModal} />
 
-          <div className="p-10 pb-8 bg-brand-50 border-b border-brand-100/50 italic">
-             <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">
-                {isOtpStep ? "Real Verification" : isLogin ? "Welcome Back" : "Clinical Signup"}
-             </h2>
-             <p className="text-sm text-slate-500 font-medium mt-1">
-                {isOtpStep ? "Firebase SMS sent." : isLogin ? "Secure access to health data." : "Verify your mobile to start shopping."}
-             </p>
-          </div>
+      <div className="relative bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 
-          <div className="p-10 pt-8">
-             {error && (
-                <div className="bg-rose-50 text-rose-700 p-4 rounded-2xl mb-6 text-xs font-black uppercase tracking-widest border border-rose-100 flex items-start gap-3">
-                   <ShieldCheck size={18} className="text-rose-500 shrink-0"/>
-                   {error}
+        {/* Close */}
+        <button
+          onClick={closeModal}
+          className="absolute top-6 right-6 text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-2 rounded-full transition-colors z-10"
+        >
+          <X size={20} />
+        </button>
+
+        {/* Header */}
+        <div className="p-10 pb-8 bg-brand-50 border-b border-brand-100/50">
+          <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase italic">
+            {heading}
+          </h2>
+          <p className="text-sm text-slate-500 font-medium mt-1">{subtext}</p>
+        </div>
+
+        {/* Body */}
+        <div className="p-10 pt-8">
+
+          {/* Error */}
+          {error && (
+            <div className="bg-rose-50 text-rose-700 p-4 rounded-2xl mb-5 text-xs font-black uppercase tracking-widest border border-rose-100 flex items-start gap-3">
+              <ShieldCheck size={18} className="text-rose-500 shrink-0 mt-0.5" />
+              {error}
+            </div>
+          )}
+
+          {/* Success */}
+          {successMsg && (
+            <div className="bg-emerald-50 text-emerald-700 p-4 rounded-2xl mb-5 text-xs font-bold border border-emerald-100 flex items-start gap-3">
+              <CheckCircle size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+              {successMsg}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+            {/* ── OTP Step ── */}
+            {isOtpStep ? (
+              <div className="animate-in zoom-in-95 duration-300 space-y-6">
+
+                {/* Phone icon */}
+                <div className="flex justify-center">
+                  <div className="bg-brand-50 p-5 rounded-3xl shadow-inner">
+                    <Smartphone size={40} className="text-brand-500" />
+                  </div>
                 </div>
-             )}
-             
-             {successMsg && (
-                <div className="bg-emerald-50 text-emerald-700 p-4 rounded-2xl mb-6 text-xs font-black uppercase tracking-widest border border-emerald-100 flex items-start gap-3">
-                   <CheckCircle size={18} className="text-emerald-500 shrink-0"/>
-                   {successMsg}
-                </div>
-             )}
 
-             <form onSubmit={handleSubmit} className="space-y-6">
-                <div id="recaptcha-container"></div>
-                {!isOtpStep ? (
-                  <>
+                {/* OTP input */}
+                <div className="space-y-3 text-center">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                    6-Digit SMS Code
+                  </label>
+                  <input
+                    type="text"
+                    maxLength="6"
+                    inputMode="numeric"
+                    autoFocus
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    required
+                    className="w-full text-center tracking-[0.6em] text-3xl font-black bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-6 focus:bg-white focus:border-brand-500 transition-all outline-none"
+                    placeholder="000000"
+                  />
+                  <p className="text-[10px] text-slate-400 font-semibold">
+                    Didn't receive it?{' '}
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={resendCooldown > 0}
+                      className="inline-flex items-center gap-1 font-black text-brand-500 hover:underline disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <RefreshCw size={11} />
+                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+                    </button>
+                  </p>
+                </div>
+
+                {/* Back */}
+                <button
+                  type="button"
+                  className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors"
+                  onClick={() => { setIsOtpStep(false); setOtpCode(''); setError(null); setSuccessMsg(''); }}
+                >
+                  ← Back to registration
+                </button>
+              </div>
+
+            ) : (
+              /* ── Login / Register ── */
+              <div className="space-y-5 animate-in fade-in duration-200">
+
+                {/* Username */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Username</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    required
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 focus:bg-white focus:border-brand-500 transition-all outline-none text-sm font-bold"
+                    placeholder="health_user_01"
+                  />
+                </div>
+
+                {/* Registration-only fields */}
+                {!isLogin && (
+                  <div className="space-y-5 animate-in slide-in-from-top-4 duration-300">
+
+                    {/* Phone (required) */}
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Username</label>
-                      <input 
-                        type="text" 
-                        value={username} onChange={(e) => setUsername(e.target.value)} required
-                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 focus:bg-white focus:border-brand-500 transition-all outline-none text-sm font-bold" 
-                        placeholder="health_user_01" 
-                      />
-                    </div>
-                    
-                    {!isLogin && (
-                      <div className="space-y-6 animate-in slide-in-from-top-4 duration-300">
-                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Phone Number (with +91) <span className="text-rose-500 font-bold">*</span></label>
-                            <input 
-                              type="tel" 
-                              value={phone} onChange={(e) => setPhone(e.target.value)} required={!isLogin}
-                              className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 focus:bg-white focus:border-brand-500 transition-all outline-none text-sm font-bold" 
-                              placeholder="+919876543210" 
-                            />
-                         </div>
-                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Email <span className="text-slate-300 font-normal lowercase">(optional)</span></label>
-                            <input 
-                              type="email" 
-                              value={email} onChange={(e) => setEmail(e.target.value)}
-                              className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 focus:bg-white focus:border-brand-500 transition-all outline-none text-sm font-bold" 
-                              placeholder="dr.smith@clinic.com" 
-                            />
-                         </div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
+                        Mobile Number <span className="text-rose-500">*</span>
+                        <span className="text-slate-300 font-normal normal-case ml-1">— OTP sent here</span>
+                      </label>
+                      <div className="relative">
+                        <Smartphone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={e => setPhone(e.target.value)}
+                          required={!isLogin}
+                          className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-10 pr-5 py-4 focus:bg-white focus:border-brand-500 transition-all outline-none text-sm font-bold"
+                          placeholder="+919876543210"
+                        />
                       </div>
-                    )}
+                      <p className="text-[10px] text-slate-400 px-1 font-semibold">Include country code, e.g. +91 for India</p>
+                    </div>
 
+                    {/* Email (optional) */}
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Password</label>
-                       <input 
-                         type="password" 
-                         value={password} onChange={(e) => setPassword(e.target.value)} required
-                         className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 focus:bg-white focus:border-brand-500 transition-all outline-none text-sm font-bold" 
-                         placeholder={isLogin ? "••••••••" : "Min. 8 characters"} 
-                       />
-                    </div>
-                  </>
-                ) : (
-                  <div className="space-y-6 animate-in zoom-in-95 duration-300">
-                    <div className="flex justify-center mb-4 text-slate-300">
-                      <Smartphone size={48} />
-                    </div>
-                    <div className="space-y-2 text-center">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Firebase SMS OTP</label>
-                      <input 
-                        type="text" 
-                        maxLength="6"
-                        value={otpCode} onChange={(e) => setOtpCode(e.target.value)} required
-                        className="w-full text-center tracking-[0.5em] text-3xl font-black bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-6 focus:bg-white focus:border-brand-500 transition-all outline-none" 
-                        placeholder="000000" 
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">
+                        Email
+                        <span className="text-slate-300 font-normal normal-case ml-1">(optional)</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 focus:bg-white focus:border-brand-500 transition-all outline-none text-sm font-bold"
+                        placeholder="you@example.com"
                       />
                     </div>
                   </div>
                 )}
-                
-                <button 
-                  type="submit" 
-                  disabled={isLoading}
-                  className="w-full bg-slate-900 text-white font-black py-5 rounded-2xl hover:bg-black active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4 shadow-xl shadow-slate-200 uppercase tracking-widest text-xs"
-                >
-                  {isLoading ? (
-                     <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  ) : (
-                     <>{isOtpStep ? "Confirm Real SMS" : isLogin ? "Initiate Session" : "Verify & Create"} <ArrowRight size={16}/></>
-                  )}
-                </button>
-             </form>
 
-             <div className="mt-8 text-center text-[10px] font-black uppercase tracking-[0.2em]">
-                {isLogin ? (
-                   <span className="text-slate-400">
-                      Join HealthMeds <button type="button" onClick={() => {setIsLogin(false); setError(null);}} className="text-brand-500 underline decoration-2 underline-offset-4">Register</button>
-                   </span>
-                ) : (
-                   <span className="text-slate-400">
-                      Already Verified? <button type="button" onClick={() => {setIsLogin(true); setError(null); setIsOtpStep(false);}} className="text-brand-500 underline decoration-2 underline-offset-4">Log In</button>
-                   </span>
-                )}
-             </div>
+                {/* Password */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 focus:bg-white focus:border-brand-500 transition-all outline-none text-sm font-bold"
+                    placeholder={isLogin ? '••••••••' : 'Min. 8 characters'}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-slate-900 text-white font-black py-5 rounded-2xl hover:bg-black active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-xl shadow-slate-200 uppercase tracking-widest text-xs mt-2"
+            >
+              {isLoading ? (
+                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  {isOtpStep
+                    ? 'Verify Code'
+                    : isLogin
+                      ? 'Sign In'
+                      : 'Register & Send OTP'}
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Toggle Login / Register */}
+          <div className="mt-8 text-center text-[10px] font-black uppercase tracking-[0.2em]">
+            {isLogin ? (
+              <span className="text-slate-400">
+                New here?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setIsLogin(false); setError(null); setSuccessMsg(''); }}
+                  className="text-brand-500 underline decoration-2 underline-offset-4"
+                >
+                  Create Account
+                </button>
+              </span>
+            ) : (
+              <span className="text-slate-400">
+                Already registered?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setIsLogin(true); setError(null); setIsOtpStep(false); setSuccessMsg(''); }}
+                  className="text-brand-500 underline decoration-2 underline-offset-4"
+                >
+                  Log In
+                </button>
+              </span>
+            )}
           </div>
-       </div>
+
+          <div id="recaptcha-container"></div>
+
+
+        </div>
+      </div>
     </div>
   );
 };
 
 export default LoginModal;
-
