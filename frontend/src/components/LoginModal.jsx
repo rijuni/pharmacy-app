@@ -32,6 +32,26 @@ const LoginModal = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [confirmationResult, setConfirmationResult] = useState(null);
 
+  const getRecaptchaVerifier = async () => {
+    // Recreate verifier each time to avoid stale widget/session issues across modal flows.
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (_) {
+        // Ignore cleanup errors and create a new verifier.
+      }
+      window.recaptchaVerifier = null;
+    }
+
+    const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
+    });
+
+    await verifier.render();
+    window.recaptchaVerifier = verifier;
+    return verifier;
+  };
+
   if (!isAuthModalOpen) return null;
 
   // ─── Resend cooldown ────────────────────────────────────────────────────────
@@ -50,13 +70,9 @@ const LoginModal = () => {
     setError(null);
     setSuccessMsg('');
     try {
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-          size: 'invisible',
-        });
-      }
+      const verifier = await getRecaptchaVerifier();
       const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
-      const result = await signInWithPhoneNumber(auth, formattedPhone, window.recaptchaVerifier);
+      const result = await signInWithPhoneNumber(auth, formattedPhone, verifier);
       setConfirmationResult(result);
       setSuccessMsg('New OTP sent to your phone via Firebase.');
       startCooldown();
@@ -88,11 +104,9 @@ const LoginModal = () => {
             setIsLoading(false);
             return;
           }
-          if (!window.recaptchaVerifier) {
-            window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
-          }
+          const verifier = await getRecaptchaVerifier();
           setSuccessMsg('Sending OTP...');
-          const result = await signInWithPhoneNumber(auth, formattedPhone, window.recaptchaVerifier);
+          const result = await signInWithPhoneNumber(auth, formattedPhone, verifier);
           setConfirmationResult(result);
           setSuccessMsg('OTP sent to your phone via Firebase.');
           setForgotPassStep(2);
@@ -110,26 +124,26 @@ const LoginModal = () => {
 
         } else if (forgotPassStep === 3) {
           if (!newPassword.trim()) {
-              setError('Please provide a new password.');
-              setIsLoading(false);
-              return;
+            setError('Please provide a new password.');
+            setIsLoading(false);
+            return;
           }
           await api.post('users/reset-password-phone/', {
-              phone_number: phone,
-              new_password: newPassword
+            phone_number: phone,
+            new_password: newPassword
           });
           setSuccessMsg('✅ Password has been reset! You can now log in.');
           setTimeout(() => {
-              setIsForgotPass(false);
-              setForgotPassStep(1);
-              setIsLogin(true);
-              setNewPassword('');
-              setPhone('');
-              setOtpCode('');
-              setSuccessMsg('');
+            setIsForgotPass(false);
+            setForgotPassStep(1);
+            setIsLogin(true);
+            setNewPassword('');
+            setPhone('');
+            setOtpCode('');
+            setSuccessMsg('');
           }, 2000);
         }
-      } 
+      }
       // ── 1. LOGIN ────────────────────────────────────────────────────────────
       else if (isLogin) {
         const res = await api.post('users/login/', { username, password });
@@ -187,14 +201,10 @@ const LoginModal = () => {
           return;
         }
 
-        if (!window.recaptchaVerifier) {
-          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            size: 'invisible',
-          });
-        }
-        
+        const verifier = await getRecaptchaVerifier();
+
         setSuccessMsg('Sending OTP...');
-        const result = await signInWithPhoneNumber(auth, formattedPhone, window.recaptchaVerifier);
+        const result = await signInWithPhoneNumber(auth, formattedPhone, verifier);
         setConfirmationResult(result);
         setSuccessMsg('OTP sent to your phone via Firebase.');
         setIsOtpStep(true);
@@ -203,7 +213,7 @@ const LoginModal = () => {
 
     } catch (err) {
       console.error('Auth error:', err);
-      
+
       // Clear reCAPTCHA if it failed so the user can try again
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
@@ -211,8 +221,8 @@ const LoginModal = () => {
       }
 
       if (err.code === 'auth/invalid-app-credential') {
-         setError('Firebase setup error: Please ensure "reCAPTCHA Enterprise API" is enabled in Google Cloud Console for this project and "localhost" is an authorized domain.');
-         return;
+        setError('Firebase setup error: Please ensure "reCAPTCHA Enterprise API" is enabled in Google Cloud Console for this project and "localhost" is an authorized domain.');
+        return;
       }
 
       const data = err.response?.data;
@@ -231,6 +241,15 @@ const LoginModal = () => {
   };
 
   const closeModal = () => {
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (_) {
+        // Ignore cleanup errors when closing modal.
+      }
+      window.recaptchaVerifier = null;
+    }
+
     dispatch(closeAuthModal());
     setIsForgotPass(false);
     setForgotPassStep(1);
@@ -244,10 +263,10 @@ const LoginModal = () => {
   const subtext = isForgotPass
     ? (forgotPassStep === 1 ? 'Enter your registered mobile number.' : forgotPassStep === 2 ? `Enter the 6-digit code sent to ${phone || 'your number'}` : "Set a secure new password.")
     : isOtpStep
-    ? `Enter the 6-digit code sent to ${phone || 'your number'}`
-    : isLogin
-      ? 'Secure access to your health data.'
-      : "Enter your mobile — we'll send an OTP to verify.";
+      ? `Enter the 6-digit code sent to ${phone || 'your number'}`
+      : isLogin
+        ? 'Secure access to your health data.'
+        : "Enter your mobile — we'll send an OTP to verify.";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -352,7 +371,7 @@ const LoginModal = () => {
                     />
                   </div>
                 )}
-                
+
                 <button
                   type="button"
                   className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors mt-2"
@@ -362,7 +381,7 @@ const LoginModal = () => {
                 </button>
               </div>
 
-            /* ── OTP Step ── */
+              /* ── OTP Step ── */
             ) : isOtpStep ? (
               <div className="animate-in zoom-in-95 duration-300 space-y-6">
 
@@ -474,7 +493,7 @@ const LoginModal = () => {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Password</label>
-                    {isLogin && <button type="button" onClick={() => {setIsForgotPass(true); setError(null); setSuccessMsg('');}} className="text-[10px] text-brand-500 font-bold hover:underline">Forgot?</button>}
+                    {isLogin && <button type="button" onClick={() => { setIsForgotPass(true); setError(null); setSuccessMsg(''); }} className="text-[10px] text-brand-500 font-bold hover:underline">Forgot?</button>}
                   </div>
                   <input
                     type="password"
@@ -501,10 +520,10 @@ const LoginModal = () => {
                   {isForgotPass
                     ? (forgotPassStep === 1 ? 'Send OTP' : forgotPassStep === 2 ? 'Verify OTP' : 'Set New Password')
                     : isOtpStep
-                    ? 'Verify Code'
-                    : isLogin
-                      ? 'Sign In'
-                      : 'Register & Send OTP'}
+                      ? 'Verify Code'
+                      : isLogin
+                        ? 'Sign In'
+                        : 'Register & Send OTP'}
                   <ArrowRight size={16} />
                 </>
               )}
