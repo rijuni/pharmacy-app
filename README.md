@@ -107,7 +107,7 @@ pharmacy-app/
 - **Framework**: Django 6.0.3, Django REST Framework 3.16.1
 - **Authentication**: djangorestframework-simplejwt (JWT tokens)
 - **Search Engine**: Meilisearch 0.40.0
-- **Database**: SQLite3 (dev), PostgreSQL (prod-ready)
+- **Database**: PostgreSQL (Active), SQLite3 (legacy)
 - **CORS**: django-cors-headers 4.9.0
 
 ### Frontend
@@ -139,7 +139,12 @@ pharmacy-app/
 
 ### Backend Setup
 
-1. **Install Python dependencies**
+1. **Prerequisites**
+   - Python 3.9+
+   - PostgreSQL (Ensure the service is running)
+   - Meilisearch
+
+2. **Install Python dependencies**
 
 ```bash
 cd backend
@@ -148,18 +153,27 @@ pip install -r requirements.txt
 
 1. **Configure environment variables**
 
-```bash
-# Add to backend_project/settings.py or create .env file
-MEILISEARCH_HOST = 'http://localhost:7700'
-MEILISEARCH_API_KEY = 'masterKey'  # Change in production
-```
+   Create a `.env` file in the `backend/` directory (or use the one already in the repo):
+   ```bash
+   DB_NAME=pharmacy_db
+   DB_USER=postgres
+   DB_PASSWORD=your_password_here
+   DB_HOST=localhost
+   DB_PORT=5432
+   MEILISEARCH_HOST=http://localhost:7700
+   MEILISEARCH_API_KEY=masterKey
+   ```
 
-1. **Run migrations**
+1. **Create Database & Run migrations**
 
-```bash
-python manage.py migrate
-python manage.py createsuperuser
-```
+   ```bash
+   # Create the database (via terminal or pgAdmin)
+   createdb pharmacy_db
+
+   # Apply migrations
+   python manage.py migrate
+   python manage.py createsuperuser
+   ```
 
 1. **Sync data to Meilisearch** (after adding sample data)
 
@@ -484,11 +498,11 @@ For issues, questions, or suggestions, please create an issue in the repository.
 1. **Meilisearch Server**: Ensure Meilisearch is running on `http://localhost:7700` during development
 2. **CORS**: Update CORS settings in `settings.py` when moving to production
 3. **Security**: Change SECRET_KEY and MEILISEARCH_API_KEY before deploying to production
-4. **Database**: Switch from SQLite to PostgreSQL for production
-5. **Static Files**: Configure proper static file serving (AWS S3, Cloudinary, etc.)
-6. **Media Files**: Set up proper media file storage and CDN
+4. **Database**: PostgreSQL is the default database. Ensure the service is running.
+5. **Firebase Auth**: On `localhost`, reCAPTCHA is bypassed via `appVerificationDisabledForTesting = true` in `src/firebase.js`. For production, ensure "reCAPTCHA Enterprise API" is enabled in GCP and your domain is whitelisted.
+6. **Environment Files**: `.env` files for both frontend and backend are now included in the repository for convenience (Update credentials as needed).
 
 ---
 
-**Last Updated**: March 15, 2026
-**Version**: 1.0.0
+**Last Updated**: March 30, 2026
+**Version**: 1.1.0
