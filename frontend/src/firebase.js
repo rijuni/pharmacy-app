@@ -15,6 +15,12 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
+// 🚀 BYPASS RECAPTCHA ON LOCALHOST (for testing/development)
+// This fixes the "auth/invalid-app-credential" error locally.
+if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+  auth.settings.appVerificationDisabledForTesting = true;
+  console.log("🔥 Firebase reCAPTCHA bypass enabled for localhost");
+}
 
 // Analytics (optional — only works in production, silently skipped in dev)
 try {

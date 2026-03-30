@@ -33,25 +33,34 @@ const LoginModal = () => {
   const [confirmationResult, setConfirmationResult] = useState(null);
 
   const getRecaptchaVerifier = async () => {
-    // Recreate verifier each time to avoid stale widget/session issues across modal flows.
     if (window.recaptchaVerifier) {
-      try {
-        window.recaptchaVerifier.clear();
-      } catch (_) {
-        // Ignore cleanup errors and create a new verifier.
-      }
-      window.recaptchaVerifier = null;
+      return window.recaptchaVerifier;
     }
 
-    const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      size: 'invisible',
-    });
+    // 🔥 IMPORTANT: ensure DOM is ready
+    const container = document.getElementById('recaptcha-container');
+    if (!container) {
+      throw new Error("reCAPTCHA container not found");
+    }
+
+    // 🔥 IMPORTANT: ensure auth is valid
+    if (!auth || !auth.app) {
+      throw new Error("Firebase auth not initialized properly");
+    }
+
+    const verifier = new RecaptchaVerifier(
+      auth, // ✅ PASS AUTH FIRST (v12 requirement)
+      'recaptcha-container',
+      {
+        size: 'invisible',
+      }
+    );
 
     await verifier.render();
+
     window.recaptchaVerifier = verifier;
     return verifier;
   };
-
   if (!isAuthModalOpen) return null;
 
   // ─── Resend cooldown ────────────────────────────────────────────────────────
