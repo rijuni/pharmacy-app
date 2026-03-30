@@ -1,9 +1,9 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  user: JSON.parse(sessionStorage.getItem('user')) || null,
-  token: sessionStorage.getItem('access_token') || null,
-  isAuthenticated: !!sessionStorage.getItem('access_token'),
+  user: JSON.parse(localStorage.getItem('user')) || null,
+  token: localStorage.getItem('access_token') || null,
+  isAuthenticated: !!localStorage.getItem('access_token'),
   isAuthModalOpen: false,
 };
 
@@ -16,20 +16,20 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.isAuthenticated = true;
       state.isAuthModalOpen = false;
-      sessionStorage.setItem('access_token', action.payload.token);
-      sessionStorage.setItem('user', JSON.stringify(action.payload.user));
+      localStorage.setItem('access_token', action.payload.token);
+      localStorage.setItem('user', JSON.stringify(action.payload.user));
       // Store refresh token if provided
       if (action.payload.refresh) {
-        sessionStorage.setItem('refresh_token', action.payload.refresh);
+        localStorage.setItem('refresh_token', action.payload.refresh);
       }
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
-      sessionStorage.removeItem('access_token');
-      sessionStorage.removeItem('refresh_token');
-      sessionStorage.removeItem('user');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
     },
     openAuthModal: (state) => {
       state.isAuthModalOpen = true;

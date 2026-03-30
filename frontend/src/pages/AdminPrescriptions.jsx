@@ -6,6 +6,7 @@ const AdminPrescriptions = () => {
     const [prescriptions, setPrescriptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedImg, setSelectedImg] = useState(null);
+    const [filter, setFilter] = useState('pending'); // default to pending
 
     useEffect(() => {
         fetchPrescriptions();
@@ -50,8 +51,16 @@ const AdminPrescriptions = () => {
                 </div>
             </div>
 
+            <div className="flex gap-4 mb-8 bg-white p-2 rounded-2xl w-fit shadow-sm border border-slate-100">
+                <button onClick={() => setFilter('pending')} className={`px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-xs transition-all ${filter === 'pending' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'text-slate-500 hover:bg-slate-50'}`}>Pending</button>
+                <button onClick={() => setFilter('verified')} className={`px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-xs transition-all ${filter === 'verified' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'text-slate-500 hover:bg-slate-50'}`}>Verified</button>
+                <button onClick={() => setFilter('all')} className={`px-6 py-2.5 rounded-xl font-black uppercase tracking-widest text-xs transition-all ${filter === 'all' ? 'bg-brand-500 text-white shadow-lg shadow-brand-500/30' : 'text-slate-500 hover:bg-slate-50'}`}>All</button>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {prescriptions.map((px) => (
+                {prescriptions
+                    .filter(px => filter === 'all' ? true : filter === 'pending' ? !px.is_verified : px.is_verified)
+                    .map((px) => (
                     <div key={px.id} className={`glass-card rounded-[2rem] overflow-hidden border-2 transition-all p-6 ${px.is_verified ? 'border-emerald-100 shadow-emerald-100/50' : 'border-slate-100 shadow-slate-100/50'}`}>
                         <div className="flex items-start justify-between mb-6">
                             <div className="flex items-center gap-4">
@@ -70,9 +79,9 @@ const AdminPrescriptions = () => {
                             </div>
                         </div>
 
-                        <div className="relative group rounded-2xl overflow-hidden cursor-zoom-in bg-slate-100 mb-6 border border-slate-200 h-48 md:h-64" onClick={() => setSelectedImg(`http://localhost:8000${px.image}`)}>
+                        <div className="relative group rounded-2xl overflow-hidden cursor-zoom-in bg-slate-100 mb-6 border border-slate-200 h-48 md:h-64" onClick={() => setSelectedImg(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}${px.image}`)}>
                             <img 
-                                src={`http://localhost:8000${px.image}`} 
+                                src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}${px.image}`} 
                                 alt="Prescription" 
                                 className="w-full h-full object-contain p-2"
                             />
@@ -109,10 +118,10 @@ const AdminPrescriptions = () => {
                 ))}
             </div>
 
-            {prescriptions.length === 0 && (
+            {prescriptions.filter(px => filter === 'all' ? true : filter === 'pending' ? !px.is_verified : px.is_verified).length === 0 && (
                 <div className="text-center py-32 bg-slate-50 rounded-[4rem] border-4 border-dashed border-slate-100">
                     <div className="text-7xl mb-6 grayscale opacity-30">📂</div>
-                    <h3 className="text-2xl font-black text-slate-300 uppercase italic">No prescriptions pending</h3>
+                    <h3 className="text-2xl font-black text-slate-300 uppercase italic">No {filter !== 'all' ? filter : ''} prescriptions</h3>
                 </div>
             )}
 

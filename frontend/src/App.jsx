@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -20,6 +21,7 @@ import AdminInventory from './pages/AdminInventory';
 import AdminCategories from './pages/AdminCategories';
 import OrderTracking from './pages/OrderTracking';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminLayout from './components/AdminLayout';
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -49,11 +51,11 @@ const AnimatedRoutes = () => {
 
           
           {/* Admin Routes (Staff Managed) */}
-          <Route path="/admin/prescriptions" element={<ProtectedRoute adminOnly={true}><AdminPrescriptions /></ProtectedRoute>} />
-          <Route path="/admin/orders" element={<ProtectedRoute adminOnly={true}><AdminOrders /></ProtectedRoute>} />
-          <Route path="/admin/analytics" element={<ProtectedRoute adminOnly={true}><AdminAnalytics /></ProtectedRoute>} />
-          <Route path="/admin/inventory" element={<ProtectedRoute adminOnly={true}><AdminInventory /></ProtectedRoute>} />
-          <Route path="/admin/categories" element={<ProtectedRoute adminOnly={true}><AdminCategories /></ProtectedRoute>} />
+          <Route path="/admin/prescriptions" element={<ProtectedRoute adminOnly={true}><AdminLayout><AdminPrescriptions /></AdminLayout></ProtectedRoute>} />
+          <Route path="/admin/orders" element={<ProtectedRoute adminOnly={true}><AdminLayout><AdminOrders /></AdminLayout></ProtectedRoute>} />
+          <Route path="/admin/analytics" element={<ProtectedRoute adminOnly={true}><AdminLayout><AdminAnalytics /></AdminLayout></ProtectedRoute>} />
+          <Route path="/admin/inventory" element={<ProtectedRoute adminOnly={true}><AdminLayout><AdminInventory /></AdminLayout></ProtectedRoute>} />
+          <Route path="/admin/categories" element={<ProtectedRoute adminOnly={true}><AdminLayout><AdminCategories /></AdminLayout></ProtectedRoute>} />
         </Routes>
       </motion.div>
     </AnimatePresence>
@@ -64,6 +66,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen mesh-bg flex flex-col">
+        <Toaster position="top-center" toastOptions={{ duration: 3000, style: { background: '#333', color: '#fff', padding: '16px', borderRadius: '12px' } }} />
         <Navbar />
         <LoginModal />
 

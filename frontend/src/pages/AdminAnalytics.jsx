@@ -115,10 +115,10 @@ const AdminAnalytics = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-                <StatCard title="Lifetime Sales" value={`₹${stats.total_revenue.toLocaleString()}`} icon={DollarSign} trend={12} color="bg-emerald-500" />
-                <StatCard title="Today's Sales" value={`₹${stats.today_revenue.toLocaleString()}`} icon={Activity} trend={8} color="bg-blue-500" />
-                <StatCard title="Total Orders" value={stats.total_orders} icon={ShoppingBag} trend={5} color="bg-purple-500" />
-                <StatCard title="Avg Order Value" value={`₹${stats.avg_order_value}`} icon={TrendingUp} trend={-2} color="bg-amber-500" />
+                <StatCard title="Lifetime Sales" value={`₹${stats.total_revenue.toLocaleString()}`} icon={DollarSign} color="bg-emerald-500" />
+                <StatCard title="Today's Sales" value={`₹${stats.today_revenue.toLocaleString()}`} icon={Activity} color="bg-blue-500" />
+                <StatCard title="Total Orders" value={stats.total_orders} icon={ShoppingBag} color="bg-purple-500" />
+                <StatCard title="Avg Order Value" value={`₹${stats.avg_order_value}`} icon={TrendingUp} color="bg-amber-500" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">

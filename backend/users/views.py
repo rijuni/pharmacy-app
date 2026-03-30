@@ -97,3 +97,31 @@ def password_reset_confirm(request):
         except User.DoesNotExist:
             return Response({"detail": "Invalid Request"}, status=status.HTTP_400_BAD_REQUEST)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([permissions.AllowAny])
+def reset_password_phone(request):
+    """
+    Reset password using phone number. 
+    Frontend handles Firebase OTP verification before calling this.
+    """
+    phone_number = request.data.get('phone_number')
+    new_password = request.data.get('new_password')
+    
+    if not phone_number or not new_password:
+        return Response(
+            {"detail": "phone_number and new_password are required."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+        
+    try:
+        user = User.objects.get(phone_number=phone_number)
+        user.set_password(new_password)
+        user.save()
+        return Response({"detail": "Password has been reset successfully"}, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response(
+            {"detail": "No user found with this phone number."}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+

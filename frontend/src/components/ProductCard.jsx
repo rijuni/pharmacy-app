@@ -1,21 +1,50 @@
 import React from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../store/cartSlice';
+import { openAuthModal } from '../store/authSlice';
 import { ShoppingCart, Heart, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 const ProductCard = ({ product }) => {
   const dispatch = useDispatch();
+  const { isAuthenticated } = useSelector(state => state.auth);
+  
+  const [isWishlisted, setIsWishlisted] = React.useState(() => {
+    const list = JSON.parse(localStorage.getItem('wishlist') || '[]');
+    return list.includes(product.id);
+  });
+
+  const toggleWishlist = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    let list = JSON.parse(localStorage.getItem('wishlist') || '[]');
+    if (isWishlisted) {
+      list = list.filter(id => id !== product.id);
+      toast.success('Removed from Wishlist', { icon: '💔' });
+    } else {
+      list.push(product.id);
+      toast.success('Added to Wishlist', { icon: '❤️' });
+    }
+    localStorage.setItem('wishlist', JSON.stringify(list));
+    setIsWishlisted(!isWishlisted);
+  };
 
   const handleAddToCart = () => {
+    if (!isAuthenticated) {
+        dispatch(openAuthModal());
+        return;
+    }
     dispatch(addToCart({ productId: product.id, quantity: 1 }));
   };
 
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/150?text=No+Image";
     if (imagePath.startsWith('http')) return imagePath;
-    return `http://localhost:8000${imagePath}`;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+    return `${backendUrl}${imagePath}`;
   };
 
   return (
@@ -29,8 +58,11 @@ const ProductCard = ({ product }) => {
             <span className="bg-slate-900 text-white text-[10px] font-black px-6 py-3 rounded-full uppercase tracking-tighter italic -rotate-12">Out of Stock</span>
           </div>
         )}
-        <button className="absolute top-4 right-4 text-slate-300 hover:text-rose-500 transition-all z-10 p-2 bg-white rounded-xl shadow-sm hover:shadow-md transform hover:scale-110 active:scale-95">
-          <Heart size={20} />
+        <button 
+          onClick={toggleWishlist}
+          className={`absolute top-4 right-4 transition-all z-10 p-2 bg-white rounded-xl shadow-sm hover:shadow-md transform hover:scale-110 active:scale-95 ${isWishlisted ? 'text-rose-500' : 'text-slate-300 hover:text-rose-500'}`}
+        >
+          <Heart size={20} className={isWishlisted ? 'fill-rose-500' : ''} />
         </button>
         <img
           src={getImageUrl(product.image)}

@@ -20,6 +20,12 @@ const LoginModal = () => {
   const [phone, setPhone] = useState('');
   const [otpCode, setOtpCode] = useState('');
 
+  // Forgot password state
+  const [isForgotPass, setIsForgotPass] = useState(false);
+  const [forgotPassStep, setForgotPassStep] = useState(1);
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -68,8 +74,64 @@ const LoginModal = () => {
     setIsLoading(true);
 
     try {
+      // ── 0. FORGOT PASSWORD ───────────────────────────────────────────────────
+      if (isForgotPass) {
+        if (forgotPassStep === 1) {
+          if (!phone.trim()) {
+            setError('Phone number is required.');
+            setIsLoading(false);
+            return;
+          }
+          const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+          if (formattedPhone.length < 12) {
+            setError('Please enter a valid phone number with country code (e.g., +919876543210).');
+            setIsLoading(false);
+            return;
+          }
+          if (!window.recaptchaVerifier) {
+            window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
+          }
+          setSuccessMsg('Sending OTP...');
+          const result = await signInWithPhoneNumber(auth, formattedPhone, window.recaptchaVerifier);
+          setConfirmationResult(result);
+          setSuccessMsg('OTP sent to your phone via Firebase.');
+          setForgotPassStep(2);
+          startCooldown();
+
+        } else if (forgotPassStep === 2) {
+          if (!confirmationResult) {
+            setError('No OTP session found.');
+            setIsLoading(false);
+            return;
+          }
+          await confirmationResult.confirm(otpCode);
+          setSuccessMsg('✅ Phone verified! Please enter your new password.');
+          setForgotPassStep(3);
+
+        } else if (forgotPassStep === 3) {
+          if (!newPassword.trim()) {
+              setError('Please provide a new password.');
+              setIsLoading(false);
+              return;
+          }
+          await api.post('users/reset-password-phone/', {
+              phone_number: phone,
+              new_password: newPassword
+          });
+          setSuccessMsg('✅ Password has been reset! You can now log in.');
+          setTimeout(() => {
+              setIsForgotPass(false);
+              setForgotPassStep(1);
+              setIsLogin(true);
+              setNewPassword('');
+              setPhone('');
+              setOtpCode('');
+              setSuccessMsg('');
+          }, 2000);
+        }
+      } 
       // ── 1. LOGIN ────────────────────────────────────────────────────────────
-      if (isLogin) {
+      else if (isLogin) {
         const res = await api.post('users/login/', { username, password });
         const profile = await api.get('users/profile/', {
           headers: { Authorization: `Bearer ${res.data.access}` },
@@ -125,25 +187,18 @@ const LoginModal = () => {
           return;
         }
 
-        // --- DEVELOPMENT BYPASS ---
-        // Bypassing Firebase OTP so you can test the rest of the application.
-        // This directly creates the user in the backend.
+        if (!window.recaptchaVerifier) {
+          window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+            size: 'invisible',
+          });
+        }
         
-        await api.post('users/register/', {
-          username,
-          password,
-          email: email || undefined,
-          phone_number: formattedPhone,
-        });
-
-        setSuccessMsg('✅ Account created successfully! Redirecting to login…');
-        setTimeout(() => {
-          setIsOtpStep(false);
-          setIsLogin(true);
-          setOtpCode('');
-          setSuccessMsg('');
-        }, 1500);
-        // --- END DEVELOPMENT BYPASS ---
+        setSuccessMsg('Sending OTP...');
+        const result = await signInWithPhoneNumber(auth, formattedPhone, window.recaptchaVerifier);
+        setConfirmationResult(result);
+        setSuccessMsg('OTP sent to your phone via Firebase.');
+        setIsOtpStep(true);
+        startCooldown();
       }
 
     } catch (err) {
@@ -177,16 +232,18 @@ const LoginModal = () => {
 
   const closeModal = () => {
     dispatch(closeAuthModal());
-    setIsOtpStep(false);
-    setIsLogin(true);
-    setError(null);
-    setSuccessMsg('');
+    setIsForgotPass(false);
+    setForgotPassStep(1);
+    setResetToken('');
+    setNewPassword('');
     setOtpCode('');
   };
 
   // ─── Derived UI labels ──────────────────────────────────────────────────────
-  const heading = isOtpStep ? 'Verify Mobile' : isLogin ? 'Welcome Back' : 'Create Account';
-  const subtext = isOtpStep
+  const heading = isForgotPass ? 'Reset Password' : isOtpStep ? 'Verify Mobile' : isLogin ? 'Welcome Back' : 'Create Account';
+  const subtext = isForgotPass
+    ? (forgotPassStep === 1 ? 'Enter your registered mobile number.' : forgotPassStep === 2 ? `Enter the 6-digit code sent to ${phone || 'your number'}` : "Set a secure new password.")
+    : isOtpStep
     ? `Enter the 6-digit code sent to ${phone || 'your number'}`
     : isLogin
       ? 'Secure access to your health data.'
@@ -235,8 +292,78 @@ const LoginModal = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
 
-            {/* ── OTP Step ── */}
-            {isOtpStep ? (
+            {/* ── Forgot Password ── */}
+            {isForgotPass ? (
+              <div className="animate-in zoom-in-95 duration-300 space-y-5">
+                {forgotPassStep === 1 ? (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Registered Mobile <span className="text-rose-500">*</span></label>
+                    <div className="relative">
+                      <Smartphone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        required
+                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl pl-10 pr-5 py-4 focus:bg-white focus:border-brand-500 transition-all outline-none text-sm font-bold"
+                        placeholder="+919876543210"
+                      />
+                    </div>
+                  </div>
+                ) : forgotPassStep === 2 ? (
+                  <div className="space-y-4 text-center">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                      6-Digit SMS Code
+                    </label>
+                    <input
+                      type="text"
+                      maxLength="6"
+                      inputMode="numeric"
+                      autoFocus
+                      value={otpCode}
+                      onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                      required
+                      className="w-full text-center tracking-[0.6em] text-3xl font-black bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-6 focus:bg-white focus:border-brand-500 transition-all outline-none"
+                      placeholder="000000"
+                    />
+                    <p className="text-[10px] text-slate-400 font-semibold">
+                      Didn't receive it?{' '}
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={resendCooldown > 0}
+                        className="inline-flex items-center gap-1 font-black text-brand-500 hover:underline disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <RefreshCw size={11} />
+                        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+                      </button>
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 animate-in fade-in duration-300">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">New Password</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      required
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 focus:bg-white focus:border-brand-500 transition-all outline-none text-sm font-bold"
+                      placeholder="••••••••"
+                    />
+                  </div>
+                )}
+                
+                <button
+                  type="button"
+                  className="w-full text-xs text-slate-400 hover:text-slate-600 transition-colors mt-2"
+                  onClick={() => { setIsForgotPass(false); setForgotPassStep(1); setError(null); setSuccessMsg(''); }}
+                >
+                  ← Back to Login
+                </button>
+              </div>
+
+            /* ── OTP Step ── */
+            ) : isOtpStep ? (
               <div className="animate-in zoom-in-95 duration-300 space-y-6">
 
                 {/* Phone icon */}
@@ -344,9 +471,11 @@ const LoginModal = () => {
                   </div>
                 )}
 
-                {/* Password */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Password</label>
+                  <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Password</label>
+                    {isLogin && <button type="button" onClick={() => {setIsForgotPass(true); setError(null); setSuccessMsg('');}} className="text-[10px] text-brand-500 font-bold hover:underline">Forgot?</button>}
+                  </div>
                   <input
                     type="password"
                     value={password}
@@ -369,7 +498,9 @@ const LoginModal = () => {
                 <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  {isOtpStep
+                  {isForgotPass
+                    ? (forgotPassStep === 1 ? 'Send OTP' : forgotPassStep === 2 ? 'Verify OTP' : 'Set New Password')
+                    : isOtpStep
                     ? 'Verify Code'
                     : isLogin
                       ? 'Sign In'

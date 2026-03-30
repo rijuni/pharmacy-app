@@ -30,6 +30,7 @@ const AdminInventory = () => {
         generic_name: '',
         category: '',
         price: '',
+        discount_price: '',
         stock: '',
         description: '',
         manufacturer: '',
@@ -85,6 +86,7 @@ const AdminInventory = () => {
                 generic_name: '',
                 category: categories.length > 0 ? categories[0].id : '',
                 price: '',
+                discount_price: '',
                 stock: '',
                 description: '',
                 manufacturer: '',
@@ -445,6 +447,16 @@ const AdminInventory = () => {
                                         step="0.01"
                                         value={formData.price}
                                         onChange={(e) => setFormData({...formData, price: e.target.value})}
+                                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 ring-brand-500 font-bold text-slate-700 outline-none"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Discount Price (₹)</label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={formData.discount_price || ''}
+                                        onChange={(e) => setFormData({...formData, discount_price: e.target.value})}
                                         className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl focus:ring-2 ring-brand-500 font-bold text-slate-700 outline-none"
                                     />
                                 </div>

@@ -18,6 +18,8 @@ const Medicines = () => {
   // Filters
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -43,18 +45,21 @@ const Medicines = () => {
         const params = new URLSearchParams();
         if (selectedCategory) params.append('category', selectedCategory);
         if (searchQuery) params.append('search', searchQuery);
+        params.append('page', page);
 
         const queryString = params.toString();
         if (queryString) url += `?${queryString}`;
 
         const response = await api.get(url);
-        // Ensure we always have an array
-        const data = response.data.results || response.data;
-        if (Array.isArray(data)) {
-          setProducts(data);
+        
+        if (response.data.results) {
+          setProducts(response.data.results);
+          setTotalPages(response.data.count ? Math.ceil(response.data.count / 12) : 1);
+        } else if (Array.isArray(response.data)) {
+          setProducts(response.data);
+          setTotalPages(1);
         } else {
           setProducts([]);
-          console.warn("Unexpected API response format", response.data);
         }
       } catch (error) {
         console.error("Failed to fetch products", error);
@@ -70,6 +75,11 @@ const Medicines = () => {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
+  }, [selectedCategory, searchQuery, page]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
   }, [selectedCategory, searchQuery]);
 
   return (
@@ -130,7 +140,7 @@ const Medicines = () => {
         ) : error ? (
           <div className="text-center py-20 bg-rose-50/50 rounded-[3rem] border-2 border-dashed border-rose-100 flex flex-col items-center">
             <h3 className="text-2xl font-black text-rose-900 mb-2 italic tracking-tighter uppercase">Service Interrupted</h3>
-            <p className="text-rose-600 font-medium italic mb-8 mb-6">{error}</p>
+            <p className="text-rose-600 font-medium italic mb-8">{error}</p>
             <button 
               onClick={() => window.location.reload()}
               className="bg-slate-900 text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-black transition-all shadow-xl shadow-slate-200"
@@ -139,11 +149,36 @@ const Medicines = () => {
             </button>
           </div>
         ) : products.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
+              {products.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 py-8">
+                <button 
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 disabled:opacity-50 font-bold text-gray-700"
+                >
+                  Previous
+                </button>
+                <div className="font-bold text-brand-600">
+                  Page {page} of {totalPages}
+                </div>
+                <button 
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 disabled:opacity-50 font-bold text-gray-700"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-16 bg-white rounded-xl shadow-sm border border-gray-100">
             <h3 className="text-xl font-bold text-gray-700 mb-2">No medicines found</h3>

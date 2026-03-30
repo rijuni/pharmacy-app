@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Search, ShoppingCart, User as UserIcon, LogOut, ChevronDown } from 'lucide-react';
+import { Search, ShoppingCart, User as UserIcon, LogOut, ChevronDown, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { logout, openAuthModal } from '../store/authSlice';
+import api from '../api/axios';
 
 const Navbar = () => {
   const { isAuthenticated, user } = useSelector((state) => state.auth);
@@ -13,6 +14,7 @@ const Navbar = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const handleLogout = () => {
@@ -36,8 +38,8 @@ const Navbar = () => {
       if (searchQuery.length > 2) {
         setIsSearching(true);
         try {
-          const response = await fetch(`http://localhost:8000/api/products/search/?q=${encodeURIComponent(searchQuery)}`);
-          const results = await response.json();
+          const response = await api.get(`products/search/?q=${encodeURIComponent(searchQuery)}`);
+          const results = response.data;
           setSearchResults(Array.isArray(results) ? results.slice(0, 5) : []);
         } catch (error) {
           console.error("Search failed:", error);
@@ -198,13 +200,51 @@ const Navbar = () => {
                 )}
               </div>
             ) : (
-              <button onClick={() => dispatch(openAuthModal())} className="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors shadow-sm whitespace-nowrap">
+              <button onClick={() => dispatch(openAuthModal())} className="hidden sm:block bg-brand-500 hover:bg-brand-600 text-white px-5 py-2 rounded-lg font-semibold transition-colors shadow-sm whitespace-nowrap">
                 Login / Signup
               </button>
             )}
+
+            <button className="lg:hidden text-gray-700 ml-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              {mobileMenuOpen ? <X size={26} /> : <Menu size={26} />}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden bg-white border-t border-gray-100 absolute w-full px-6 py-6 space-y-4 shadow-xl animate-in slide-in-from-top-2">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (searchQuery.trim()) {
+                navigate(`/search?q=${searchQuery}`);
+                setMobileMenuOpen(false);
+                setSearchResults([]);
+              }
+            }} className="w-full relative md:hidden mb-6">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search..."
+                className="w-full bg-gray-50 border border-gray-300 rounded-lg py-3 pl-4 pr-12 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <button type="submit" className="absolute right-0 top-0 h-full px-4 text-gray-400">
+                <Search size={20} />
+              </button>
+            </form>
+          <nav className="flex flex-col space-y-5 font-bold text-gray-700">
+            <Link to="/medicines" onClick={() => setMobileMenuOpen(false)}>Medicines</Link>
+            <Link to="/prescriptions" onClick={() => setMobileMenuOpen(false)}>Upload Rx</Link>
+            {!isAuthenticated && (
+              <button onClick={() => { setMobileMenuOpen(false); dispatch(openAuthModal()); }} className="text-left font-black text-brand-600 border-t border-gray-100 pt-5">
+                Login / Signup
+              </button>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 };

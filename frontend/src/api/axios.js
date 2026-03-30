@@ -9,7 +9,7 @@ const api = axios.create({
 // ─── Request Interceptor ─────────────────────────────────────────────────────
 // Attach JWT token to every outgoing request
 api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('access_token');
+  const token = localStorage.getItem('access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -57,7 +57,7 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = sessionStorage.getItem('refresh_token');
+      const refreshToken = localStorage.getItem('refresh_token');
 
       if (!refreshToken) {
         // No refresh token — force logout
@@ -73,7 +73,7 @@ api.interceptors.response.use(
         );
 
         const newAccessToken = response.data.access;
-        sessionStorage.setItem('access_token', newAccessToken);
+        localStorage.setItem('access_token', newAccessToken);
 
         api.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;

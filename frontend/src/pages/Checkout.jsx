@@ -385,7 +385,7 @@ const CheckoutContent = () => {
                                         <p className="text-sm font-bold text-slate-800 line-clamp-1">{item.product.name}</p>
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{item.quantity} Unit{item.quantity>1?'s':''}</p>
                                     </div>
-                                    <p className="font-black text-slate-900 text-sm">₹{item.product.price * item.quantity}</p>
+                                    <p className="font-black text-slate-900 text-sm">₹{(item.product.discount_price || item.product.price) * item.quantity}</p>
                                 </div>
                             ))}
                         </div>

@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { logout, openAuthModal } from '../store/authSlice';
-import { User, MapPin, Plus, LogOut, Package, FileText, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { User, MapPin, Plus, LogOut, Package, FileText, CheckCircle, Clock, XCircle, ExternalLink } from 'lucide-react';
 
 const Profile = () => {
    const { user, isAuthenticated } = useSelector(state => state.auth);
@@ -265,9 +265,11 @@ const Profile = () => {
                            {prescriptions.map(px => (
                               <div key={px.id} className="glass-card rounded-2xl overflow-hidden border border-slate-100 flex flex-col">
                                  <div className="h-40 bg-slate-100 relative overflow-hidden group">
-                                    <img src={`http://localhost:8000${px.image}`} alt="Prescription" className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                       <a href={`http://localhost:8000${px.image}`} target="_blank" rel="noreferrer" className="bg-white/90 p-2 rounded-full text-slate-900">
+{px.image ? (
+                                    <img src={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}${px.image}`} alt="Prescription" className="w-full h-full object-cover" />
+                                 ) : null}
+                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <a href={`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}${px.image}`} target="_blank" rel="noreferrer" className="bg-white/90 p-2 rounded-full text-slate-900">
                                           <ExternalLink size={20} />
                                        </a>
                                     </div>

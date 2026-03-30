@@ -7,35 +7,36 @@ import ThreeScene from '../components/ThreeScene';
 import api from '../api/axios';
 
 const Home = () => {
-   // Dummy featured products to show on home page
-   const featuredMedicines = [
-      { id: 1, name: 'Amoxicillin 500mg', generic_name: 'Amoxicillin', manufacturer: 'Cipla Ltd', image: '', price: 150.00, discount_price: 120.00, requires_prescription: true, is_available: true },
-      { id: 2, name: 'Paracetamol 650mg', generic_name: 'Paracetamol', manufacturer: 'GSK Pharma', image: '', price: 40.00, discount_price: 35.00, requires_prescription: false, is_available: true },
-      { id: 3, name: 'Vitamin C Zinc', generic_name: 'Ascorbic Acid', manufacturer: 'Abbott', image: '', price: 180.00, discount_price: 150.00, requires_prescription: false, is_available: true },
-      { id: 4, name: 'Ibuprofen 400mg', generic_name: 'Ibuprofen', manufacturer: 'Sun Pharma', image: '', price: 80.00, discount_price: 70.00, requires_prescription: false, is_available: true },
-   ];
-
+   const [featuredMedicines, setFeaturedMedicines] = useState([]);
    const [categories, setCategories] = useState([]);
 
    useEffect(() => {
-      const fetchCategories = async () => {
+      const fetchData = async () => {
          try {
-            const res = await api.get('products/categories/');
-            const data = res.data.results || res.data;
-            setCategories(Array.isArray(data) ? data : []);
+            const [catRes, prodRes] = await Promise.all([
+               api.get('products/categories/'),
+               api.get('products/products/?limit=4')
+            ]);
+            
+            const catData = catRes.data.results || catRes.data;
+            setCategories(Array.isArray(catData) ? catData : []);
+
+            const prodData = prodRes.data.results || prodRes.data;
+            setFeaturedMedicines(Array.isArray(prodData) ? prodData.slice(0, 4) : []);
          } catch (err) {
-            console.error("Failed to fetch categories", err);
+            console.error("Failed to fetch home data", err);
          }
       };
 
-
-      fetchCategories();
+      fetchData();
    }, []);
+
 
    const getImageUrl = (imagePath) => {
       if (!imagePath) return "https://via.placeholder.com/150?text=Health";
       if (imagePath.startsWith('http')) return imagePath;
-      return `http://localhost:8000${imagePath}`;
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      return `${backendUrl}${imagePath}`;
    };
 
    const getCategoryIcon = (name) => {
@@ -173,9 +174,9 @@ const Home = () => {
             <div className="z-10 relative text-white">
                <h3 className="text-3xl font-extrabold mb-2">Comprehensive Lab Tests</h3>
                <p className="text-gray-300 mb-4 max-w-lg">Get full body checkups and advanced diagnostics mapped straight to our hospital labs.</p>
-               <button className="bg-white text-gray-900 px-6 py-2 rounded-lg font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all">
+               <Link to="/medicines?category=Lab%20Tests" className="inline-block bg-white text-gray-900 px-6 py-2 rounded-lg font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all">
                   Book Test Now
-               </button>
+               </Link>
             </div>
             <div className="absolute right-0 top-0 w-1/3 h-full bg-brand-500 opacity-20 transform -skew-x-12 translate-x-12"></div>
          </div>

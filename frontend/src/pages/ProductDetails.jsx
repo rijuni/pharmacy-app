@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { ShoppingCart, Heart, Activity, CheckCircle, Shield, AlertTriangle, Star, User, MessageSquare, Send } from 'lucide-react';
+import { ShoppingCart, Heart, Activity, CheckCircle, Shield, AlertTriangle, Star, User, MessageSquare, Send, Package } from 'lucide-react';
 import { addToCart } from '../store/cartSlice';
+import { openAuthModal } from '../store/authSlice';
 import api from '../api/axios';
+import toast from 'react-hot-toast';
 
 const ProductDetails = () => {
    const { id } = useParams();
@@ -16,10 +18,31 @@ const ProductDetails = () => {
    const [reviewRating, setReviewRating] = useState(5);
    const [reviewComment, setReviewComment] = useState('');
    const [submittingReview, setSubmittingReview] = useState(false);
+   const [isWishlisted, setIsWishlisted] = useState(false);
 
    useEffect(() => {
       fetchProduct();
    }, [id]);
+
+   useEffect(() => {
+      if (product) {
+         const list = JSON.parse(localStorage.getItem('wishlist') || '[]');
+         setIsWishlisted(list.includes(product.id));
+      }
+   }, [product]);
+
+   const toggleWishlist = () => {
+      let list = JSON.parse(localStorage.getItem('wishlist') || '[]');
+      if (isWishlisted) {
+         list = list.filter(itemId => itemId !== product.id);
+         toast.success('Removed from Wishlist', { icon: '💔' });
+      } else {
+         list.push(product.id);
+         toast.success('Added to Wishlist', { icon: '❤️' });
+      }
+      localStorage.setItem('wishlist', JSON.stringify(list));
+      setIsWishlisted(!isWishlisted);
+   };
 
    const fetchProduct = async () => {
       try {
@@ -33,6 +56,10 @@ const ProductDetails = () => {
    };
 
    const handleAdd = () => {
+      if (!isAuthenticated) {
+          dispatch(openAuthModal());
+          return;
+      }
       if(product) {
          dispatch(addToCart({ productId: product.id, quantity: 1 }));
          navigate('/cart');
@@ -67,7 +94,8 @@ const ProductDetails = () => {
    const getImageUrl = (imagePath) => {
       if (!imagePath) return "https://via.placeholder.com/300?text=Image+Unavailable";
       if (imagePath.startsWith('http')) return imagePath;
-      return `http://localhost:8000${imagePath}`;
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+      return `${backendUrl}${imagePath}`;
    };
 
    if (loading) return <div className="py-20 text-center text-4xl font-black text-slate-200 animate-pulse italic">PHARMACIST IS FETCHING...</div>;
@@ -91,8 +119,11 @@ const ProductDetails = () => {
                        <span className="bg-slate-900 text-white text-2xl font-black px-10 py-5 rounded-full rotate-[-10deg] shadow-2xl uppercase tracking-tighter italic">Out of Stock</span>
                     </div>
                   )}
-                  <button className="absolute top-8 right-8 bg-white p-4 rounded-2xl shadow-lg hover:shadow-xl hover:text-rose-500 text-slate-300 transition-all transform hover:scale-110 active:scale-95">
-                     <Heart size={24} />
+                  <button 
+                     onClick={toggleWishlist}
+                     className={`absolute top-8 right-8 bg-white p-4 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:scale-110 active:scale-95 ${isWishlisted ? 'text-rose-500 shadow-rose-500/20' : 'text-slate-300 hover:text-rose-500'}`}
+                  >
+                     <Heart size={24} className={isWishlisted ? 'fill-rose-500' : ''} />
                   </button>
                   <img 
                      src={getImageUrl(product.image)} 

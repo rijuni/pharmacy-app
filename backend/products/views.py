@@ -80,10 +80,11 @@ class ProductSearchView(APIView):
             # Fallback to standard DB search if Meilisearch fails
             products = Product.objects.filter(name__icontains=q)
             if category:
-                products = products.filter(category_id=category)
+                products = products.filter(category__name=category)
             
             from .serializers import ProductSerializer
             serializer = ProductSerializer(products[:20], many=True)
+            return Response(serializer.data)
 
 import json
 from rest_framework import status

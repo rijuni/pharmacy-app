@@ -9,7 +9,7 @@ import { openAuthModal } from '../store/authSlice';
 const Cart = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { items, totalPrice } = useSelector(state => state.cart);
+  const { items, totalPrice, status } = useSelector(state => state.cart);
   const { isAuthenticated } = useSelector(state => state.auth);
 
   useEffect(() => {
@@ -35,7 +35,8 @@ const Cart = () => {
   const getImageUrl = (imagePath) => {
      if (!imagePath) return "https://via.placeholder.com/60?text=No+Img";
      if (imagePath.startsWith('http')) return imagePath;
-     return `http://localhost:8000${imagePath}`;
+     const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+     return `${backendUrl}${imagePath}`;
   };
 
   if (!isAuthenticated) {
@@ -49,6 +50,14 @@ const Cart = () => {
   }
 
   const requiresRx = items.some(item => item.product.requires_prescription);
+
+  if (status === 'loading') {
+     return (
+        <div className="py-20 flex justify-center items-center">
+           <div className="w-12 h-12 border-4 border-brand-200 border-t-brand-500 rounded-full animate-spin"></div>
+        </div>
+     );
+  }
 
   return (
     <div className="flex flex-col lg:flex-row gap-8">

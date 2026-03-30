@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Filter, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
+import api from '../api/axios';
 
 const SearchPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -17,9 +18,9 @@ const SearchPage = () => {
         // Fetch categories for the filter sidebar
         const fetchCategories = async () => {
             try {
-                const res = await fetch('http://localhost:8000/api/products/categories/');
-                const data = await res.json();
-                setCategories(data);
+                const res = await api.get('products/categories/');
+                const data = res.data.results || res.data;
+                setCategories(Array.isArray(data) ? data : []);
             } catch (err) {
                 console.error("Failed to fetch categories", err);
             }
@@ -31,15 +32,15 @@ const SearchPage = () => {
         const fetchResults = async () => {
             setLoading(true);
             try {
-                let url = `http://localhost:8000/api/products/search/?q=${encodeURIComponent(query)}`;
+                let url = `products/search/?q=${encodeURIComponent(query)}`;
                 if (categoryId) {
                     url += `&category=${encodeURIComponent(categoryId)}`;
                 }
                 if (requiresRx === 'true') {
                     url += `&requires_prescription=true`;
                 }
-                const response = await fetch(url);
-                const data = await response.json();
+                const response = await api.get(url);
+                const data = response.data.results || response.data;
                 setResults(Array.isArray(data) ? data : []);
             } catch (err) {
                 console.error("Search failed", err);
