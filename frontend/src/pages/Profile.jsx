@@ -35,13 +35,13 @@ const Profile = () => {
       const fetchProfileData = async () => {
          try {
             const addrRes = await api.get('users/addresses/');
-            setAddresses(addrRes.data);
+            setAddresses(addrRes.data.results || addrRes.data || []);
 
             const ordRes = await api.get('orders/orders/');
-            setOrders(ordRes.data);
+            setOrders(ordRes.data.results || ordRes.data || []);
 
             const pxRes = await api.get('orders/prescriptions/');
-            setPrescriptions(pxRes.data);
+            setPrescriptions(pxRes.data.results || pxRes.data || []);
          } catch (err) {
             console.error(err);
          }

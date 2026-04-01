@@ -178,7 +178,7 @@ const AdminCategories = () => {
                             {/* Image Upload Area */}
                             <div className="flex justify-center mb-4">
                                 <div className="relative group">
-                                    <div className="w-32 h-32 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden">
+                                    <div className="w-32 h-32 bg-slate-50 rounded-4xl border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden">
                                         {imagePreview ? (
                                             <img src={imagePreview} alt="Preview" className="w-full h-full object-contain mix-blend-multiply" />
                                         ) : (
@@ -191,7 +191,7 @@ const AdminCategories = () => {
                                         onChange={handleImageChange}
                                         className="absolute inset-0 opacity-0 cursor-pointer"
                                     />
-                                    <div className="absolute inset-0 bg-black/40 rounded-[2rem] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                                    <div className="absolute inset-0 bg-black/40 rounded-4xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                                         <Plus className="text-white" size={24} />
                                     </div>
                                 </div>

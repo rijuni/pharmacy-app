@@ -6,7 +6,7 @@ import { Elements } from '@stripe/react-stripe-js';
 import api from '../api/axios';
 import { fetchCart } from '../store/cartSlice';
 import { openAuthModal } from '../store/authSlice';
-import { MapPin, CreditCard, DollarSign, CheckCircle, AlertCircle, Plus, X, Truck } from 'lucide-react';
+import { MapPin, CreditCard, DollarSign, CheckCircle, AlertCircle, Plus, X, Truck, Minus, Trash2 } from 'lucide-react';
 import StripePaymentForm from '../components/StripePaymentForm';
 
 // Initialize Stripe
@@ -25,6 +25,8 @@ const CheckoutContent = () => {
     const [success, setSuccess] = useState(false);
     const [prescriptionWarning, setPrescriptionWarning] = useState('');
     const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+    const [showConfirmation, setShowConfirmation] = useState(false);
+    const [showStripePayment, setShowStripePayment] = useState(false);
     
     // Address Form State
     const [showAddressForm, setShowAddressForm] = useState(false);
@@ -38,12 +40,15 @@ const CheckoutContent = () => {
     const fetchAddresses = async () => {
         try {
             const res = await api.get('users/addresses/');
-            setAddresses(res.data);
-            if (res.data.length > 0 && !selectedAddress) {
-                setSelectedAddress(res.data[0].id);
+            // API returns paginated response, extract results array
+            const addressList = res.data.results || res.data || [];
+            setAddresses(Array.isArray(addressList) ? addressList : []);
+            if (addressList.length > 0 && !selectedAddress) {
+                setSelectedAddress(addressList[0].id);
             }
         } catch (err) {
             console.error(err);
+            setAddresses([]);
         }
     };
 
@@ -99,6 +104,11 @@ const CheckoutContent = () => {
             return;
         }
 
+        // Show confirmation step instead of directly processing
+        setShowConfirmation(true);
+    };
+
+    const processRazorpayPayment = async () => {
         setIsProcessing(true);
         setError('');
 
@@ -147,6 +157,7 @@ const CheckoutContent = () => {
                 modal: {
                     ondismiss: function() {
                         setIsProcessing(false);
+                        setShowConfirmation(false);
                     }
                 }
             };
@@ -156,6 +167,46 @@ const CheckoutContent = () => {
         } catch (err) {
             setError("Failed to initiate Razorpay payment.");
             setIsProcessing(false);
+            setShowConfirmation(false);
+        }
+    };
+
+    const handleConfirmOrder = async () => {
+        if (paymentMethod === 'cod') {
+            // For COD, directly place order
+            await handlePlaceOrder();
+            setShowConfirmation(false);
+        } else if (paymentMethod === 'razorpay') {
+            // For Razorpay, process payment
+            setShowConfirmation(false);
+            await processRazorpayPayment();
+        } else if (paymentMethod === 'card') {
+            // For Stripe, show payment form in modal
+            setShowStripePayment(true);
+        }
+    };
+
+    const handleUpdateQuantity = async (productId, newQuantity) => {
+        try {
+            if (newQuantity === 0) {
+                // Remove item
+                await api.post('orders/cart/remove/', { product_id: productId });
+            } else {
+                // Update quantity
+                await api.post('orders/cart/add/', { product_id: productId, quantity: 1 });
+            }
+            dispatch(fetchCart());
+        } catch (err) {
+            console.error("Failed to update cart:", err);
+        }
+    };
+
+    const handleRemoveItem = async (productId) => {
+        try {
+            await api.post('orders/cart/remove/', { product_id: productId });
+            dispatch(fetchCart());
+        } catch (err) {
+            console.error("Failed to remove item:", err);
         }
     };
 
@@ -223,6 +274,164 @@ const CheckoutContent = () => {
         );
     }
 
+    // Get selected address details
+    const selectedAddressDetails = addresses.find(a => a.id === selectedAddress);
+
+    // Confirmation Modal
+    if (showConfirmation) {
+        return (
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                <div className="bg-white rounded-[3rem] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-8 duration-300">
+                    {/* Show Stripe Payment Form if in stripe payment step */}
+                    {showStripePayment && paymentMethod === 'card' ? (
+                        <div className="p-8">
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Payment Details</h2>
+                                <p className="text-slate-500 text-sm mt-2">Complete your payment to confirm the order</p>
+                            </div>
+                            <StripePaymentForm 
+                                amount={totalPrice}
+                                isProcessing={isProcessing}
+                                onPaymentSuccess={(id) => {
+                                    handlePlaceOrder(id);
+                                    setShowConfirmation(false);
+                                    setShowStripePayment(false);
+                                }}
+                            />
+                            <button
+                                onClick={() => {
+                                    setShowStripePayment(false);
+                                }}
+                                className="w-full mt-6 bg-slate-100 text-slate-700 font-black py-3 rounded-2xl uppercase tracking-widest text-sm hover:bg-slate-200 transition-all"
+                            >
+                                ← Back to Order Review
+                            </button>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Header */}
+                            <div className="bg-linear-to-r from-brand-50 to-emerald-50 p-8 border-b border-slate-100 sticky top-0">
+                                <h2 className="text-3xl font-black text-slate-900 tracking-tight">Confirm Your Order</h2>
+                                <p className="text-slate-500 text-sm mt-2">Please review your order details before proceeding</p>
+                            </div>
+
+                            {/* Content */}
+                            <div className="p-8 space-y-8">
+                                {/* Order Items */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                                        <span className="bg-brand-100 text-brand-600 rounded-xl h-8 w-8 flex items-center justify-center text-sm font-black">📦</span>
+                                        Order Items
+                                    </h3>
+                                    <div className="bg-slate-50 rounded-2xl p-6 space-y-3 border border-slate-100">
+                                        {items.map(item => (
+                                            <div key={item.id} className="flex justify-between items-center pb-4 border-b border-slate-200 last:border-b-0 last:pb-0 gap-4">
+                                                <div className="flex-1">
+                                                    <p className="font-bold text-slate-800">{item.product.name}</p>
+                                                    <p className="text-xs text-slate-500 mt-1">₹{item.product.discount_price || item.product.price} x {item.quantity}</p>
+                                                </div>
+                                                
+                                                {/* Quantity Controls */}
+                                                <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl p-2">
+                                                    <button
+                                                        onClick={() => handleUpdateQuantity(item.product.id, item.quantity - 1)}
+                                                        className="p-1 hover:bg-red-50 rounded-lg text-slate-600 hover:text-red-600 transition-colors"
+                                                        title="Decrease quantity"
+                                                    >
+                                                        <Minus size={16} />
+                                                    </button>
+                                                    <span className="px-3 font-bold text-slate-800 min-w-8 text-center">{item.quantity}</span>
+                                                    <button
+                                                        onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)}
+                                                        className="p-1 hover:bg-emerald-50 rounded-lg text-slate-600 hover:text-emerald-600 transition-colors"
+                                                        title="Increase quantity"
+                                                    >
+                                                        <Plus size={16} />
+                                                    </button>
+                                                </div>
+
+                                                {/* Price & Delete */}
+                                                <div className="flex items-center gap-3">
+                                                    <p className="font-black text-slate-900 min-w-16 text-right">₹{(item.product.discount_price || item.product.price) * item.quantity}</p>
+                                                    <button
+                                                        onClick={() => handleRemoveItem(item.product.id)}
+                                                        className="p-2 hover:bg-red-50 rounded-xl text-red-500 hover:text-red-700 transition-colors"
+                                                        title="Remove item"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Delivery Address */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                                        <span className="bg-blue-100 text-blue-600 rounded-xl h-8 w-8 flex items-center justify-center text-sm font-black">📍</span>
+                                        Delivery Address
+                                    </h3>
+                                    {selectedAddressDetails && (
+                                        <div className="bg-blue-50 rounded-2xl p-6 border-2 border-blue-100">
+                                            <p className="font-bold text-slate-800 text-sm">{selectedAddressDetails.street}</p>
+                                            <p className="text-sm text-slate-600 mt-2">{selectedAddressDetails.city}, {selectedAddressDetails.state} {selectedAddressDetails.zip_code}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Payment Method */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                                        <span className="bg-purple-100 text-purple-600 rounded-xl h-8 w-8 flex items-center justify-center text-sm font-black">💳</span>
+                                        Payment Method
+                                    </h3>
+                                    <div className="bg-purple-50 rounded-2xl p-6 border-2 border-purple-100">
+                                        <p className="font-bold text-slate-800">
+                                            {paymentMethod === 'cod' && '💵 Cash on Delivery'}
+                                            {paymentMethod === 'card' && '🏧 Card (Stripe)'}
+                                            {paymentMethod === 'razorpay' && '📱 Razorpay (UPI/Cards)'}
+                                        </p>
+                                        <p className="text-xs text-slate-500 mt-2">
+                                            {paymentMethod === 'cod' && 'Pay at your doorstep'}
+                                            {paymentMethod === 'card' && 'Secure payment via Stripe'}
+                                            {paymentMethod === 'razorpay' && 'Multiple payment options'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Total Amount */}
+                                <div className="bg-linear-to-r from-brand-50 to-emerald-50 rounded-2xl p-6 border-2 border-brand-100">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-lg font-black text-slate-900 uppercase tracking-tight">Total Amount</span>
+                                        <span className="text-4xl font-black text-brand-600 italic">₹{totalPrice}</span>
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-4 pt-8 border-t border-slate-100">
+                                    <button
+                                        onClick={() => setShowConfirmation(false)}
+                                        className="flex-1 bg-slate-100 text-slate-700 font-black py-4 rounded-2xl uppercase tracking-widest text-sm hover:bg-slate-200 transition-all"
+                                    >
+                                        ← Change Payment Method
+                                    </button>
+                                    <button
+                                        onClick={handleConfirmOrder}
+                                        disabled={isProcessing}
+                                        className={`flex-1 font-black py-4 rounded-2xl shadow-lg transition-all text-white uppercase tracking-widest text-sm ${isProcessing ? 'bg-slate-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700 hover:scale-[1.02] active:scale-95'}`}
+                                    >
+                                        {isProcessing ? '⏳ Processing...' : '✓ Confirm Order'}
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-6xl mx-auto">
             <h1 className="text-4xl font-black text-slate-900 mb-10 tracking-tight">Checkout</h1>
@@ -232,7 +441,7 @@ const CheckoutContent = () => {
                     
                     {/* Prescription Warning */}
                     {prescriptionWarning && (
-                        <div className="bg-amber-50 border-2 border-amber-100 rounded-[2rem] p-6 flex gap-4 items-center">
+                        <div className="bg-amber-50 border-2 border-amber-100 rounded-4xl p-6 flex gap-4 items-center">
                             <div className="bg-amber-100 p-3 rounded-2xl text-amber-600">
                                 <AlertCircle size={24} />
                             </div>
@@ -263,7 +472,7 @@ const CheckoutContent = () => {
                         {error && <div className="bg-rose-50 text-rose-700 p-4 rounded-2xl mb-6 text-sm font-bold border-2 border-rose-100 flex items-center gap-2 italic">⚠ {error}</div>}
 
                         {showAddressForm ? (
-                            <form onSubmit={handleAddAddress} className="space-y-4 bg-slate-50/50 p-6 rounded-[2rem] border-2 border-dashed border-slate-200">
+                            <form onSubmit={handleAddAddress} className="space-y-4 bg-slate-50/50 p-6 rounded-4xl border-2 border-dashed border-slate-200">
                                 <div className="flex justify-between items-center mb-2">
                                     <h4 className="font-black text-slate-400 uppercase tracking-widest text-[10px]">Add New Address</h4>
                                     <button type="button" onClick={() => setShowAddressForm(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
@@ -362,13 +571,12 @@ const CheckoutContent = () => {
                         </div>
 
                         {paymentMethod === 'card' && (
-                            <div className="mt-8 animate-in slide-in-from-top-4">
-                                <StripePaymentForm 
-                                    amount={totalPrice} 
-                                    isProcessing={isProcessing}
-                                    onPaymentSuccess={(id) => handlePlaceOrder(id)} 
-                                />
-                            </div>
+                            <button
+                                onClick={() => setShowConfirmation(true)}
+                                className="w-full mt-8 bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl transition-all uppercase tracking-widest text-sm hover:bg-emerald-700 hover:scale-[1.02] active:scale-95"
+                            >
+                                Proceed to Confirm
+                            </button>
                         )}
                     </div>
 
@@ -408,11 +616,11 @@ const CheckoutContent = () => {
 
                         {paymentMethod === 'cod' && (
                             <button 
-                                onClick={() => handlePlaceOrder()}
+                                onClick={() => setShowConfirmation(true)}
                                 disabled={isProcessing}
                                 className={`w-full font-black py-4 rounded-2xl shadow-xl transition-all text-white uppercase tracking-widest text-sm flex items-center justify-center gap-2 ${isProcessing ? 'bg-slate-400 cursor-not-allowed' : 'bg-slate-900 hover:bg-black hover:scale-[1.02] active:scale-95 shadow-black/10'}`}
                             >
-                                {isProcessing ? 'Processing Order...' : 'Confirm Order (COD)'}
+                                {isProcessing ? 'Processing Order...' : 'Proceed to Confirm'}
                             </button>
                         )}
 

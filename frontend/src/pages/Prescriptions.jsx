@@ -29,7 +29,7 @@ const Prescriptions = () => {
    const fetchPrescriptions = async () => {
       try {
          const res = await api.get('orders/prescriptions/');
-         setPrescriptions(res.data);
+         setPrescriptions(res.data.results || res.data || []);
       } catch (err) {
          console.error(err);
       } finally {

@@ -61,7 +61,7 @@ const AdminPrescriptions = () => {
                 {prescriptions
                     .filter(px => filter === 'all' ? true : filter === 'pending' ? !px.is_verified : px.is_verified)
                     .map((px) => (
-                    <div key={px.id} className={`glass-card rounded-[2rem] overflow-hidden border-2 transition-all p-6 ${px.is_verified ? 'border-emerald-100 shadow-emerald-100/50' : 'border-slate-100 shadow-slate-100/50'}`}>
+                    <div key={px.id} className={`glass-card rounded-4xl overflow-hidden border-2 transition-all p-6 ${px.is_verified ? 'border-emerald-100 shadow-emerald-100/50' : 'border-slate-100 shadow-slate-100/50'}`}>
                         <div className="flex items-start justify-between mb-6">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center">

@@ -54,7 +54,8 @@ const Medicines = () => {
         
         if (response.data.results) {
           setProducts(response.data.results);
-          setTotalPages(response.data.count ? Math.ceil(response.data.count / 12) : 1);
+          // Backend uses page size of 20, so calculate pages accordingly
+          setTotalPages(response.data.count ? Math.ceil(response.data.count / 20) : 1);
         } else if (Array.isArray(response.data)) {
           setProducts(response.data);
           setTotalPages(1);

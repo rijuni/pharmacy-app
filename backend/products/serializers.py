@@ -28,7 +28,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'id', 'name', 'generic_name', 'category', 'category_name',
             'description', 'price', 'stock', 'image', 'requires_prescription',
             'availability_status', 'manufacturer', 'strength', 'form',
-            'salt_composition', 'side_effects', 'expert_tips', 'interactions', 'how_to_use',
+            'salt_composition', 'side_effects', 'expert_tips', 'how_to_use',
             'is_available', 'substitutes', 'average_rating', 'reviews', 
             'created_at', 'updated_at'
         ]
