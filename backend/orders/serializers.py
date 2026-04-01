@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Cart, CartItem, Order, OrderItem, Prescription
+from .models import (Cart, CartItem, Order, OrderItem, Prescription, 
+                     OrderCancellationRequest, Refund, OrderDelivery)
 from products.serializers import ProductSerializer
 from users.models import Address
 from users.serializers import AddressSerializer
@@ -55,3 +56,59 @@ class PrescriptionSerializer(serializers.ModelSerializer):
         model = Prescription
         fields = '__all__'
         read_only_fields = ('user',)
+
+
+# ============= ORDER CANCELLATION SERIALIZERS =============
+class OrderCancellationSerializer(serializers.ModelSerializer):
+    can_cancel = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderCancellationRequest
+        fields = [
+            'id', 'order', 'user', 'reason', 'comments', 'status',
+            'requested_at', 'processed_at', 'processed_by', 'admin_notes', 'can_cancel'
+        ]
+        read_only_fields = ['user', 'status', 'requested_at', 'processed_at', 'processed_by', 'admin_notes']
+
+    def get_can_cancel(self, obj):
+        return obj.can_cancel
+
+
+class RefundSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Refund
+        fields = [
+            'id', 'order', 'cancellation_request', 'refund_amount', 'refund_method',
+            'status', 'transaction_id', 'refund_notes', 'requested_at', 'completed_at'
+        ]
+        read_only_fields = ['transaction_id', 'refund_notes', 'completed_at']
+
+
+# ============= ORDER DELIVERY SERIALIZERS =============
+class OrderDeliverySerializer(serializers.ModelSerializer):
+    delivery_slot_details = serializers.SerializerMethodField()
+    is_overdue = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderDelivery
+        fields = [
+            'id', 'order', 'delivery_slot', 'delivery_slot_details', 'status',
+            'estimated_delivery_date', 'actual_delivery_date', 'delivery_partner',
+            'tracking_number', 'delivery_attempts', 'last_delivery_attempt',
+            'is_overdue', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'delivery_slot_details', 'actual_delivery_date', 'is_overdue', 
+            'created_at', 'updated_at'
+        ]
+
+    def get_delivery_slot_details(self, obj):
+        if obj.delivery_slot:
+            return {
+                'id': obj.delivery_slot.id,
+                'time_window': f"{obj.delivery_slot.start_time.strftime('%H:%M')} - {obj.delivery_slot.end_time.strftime('%H:%M')}"
+            }
+        return None
+
+    def get_is_overdue(self, obj):
+        return obj.is_overdue

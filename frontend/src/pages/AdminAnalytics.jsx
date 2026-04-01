@@ -79,7 +79,7 @@ const AdminAnalytics = () => {
     const COLORS = ['#0D9488', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444'];
 
     const StatCard = ({ title, value, icon: Icon, trend, color }) => (
-        <div className="glass-card p-6 rounded-[2rem] border border-slate-100 hover:shadow-xl transition-all">
+        <div className="glass-card p-6 rounded-4xl border border-slate-100 hover:shadow-xl transition-all">
             <div className="flex justify-between items-start mb-4">
                 <div className={`p-3 rounded-2xl ${color}`}>
                     <Icon size={24} className="text-white" />
@@ -123,11 +123,11 @@ const AdminAnalytics = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                 {/* Sales Performance Chart */}
-                <div className="glass-card p-8 rounded-[2.5rem] border border-slate-100 min-h-[400px]">
+                <div className="glass-card p-8 rounded-[2.5rem] border border-slate-100 min-h-100">
                     <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-2 uppercase tracking-tighter">
                         <BarIcon size={24} className="text-brand-500" /> Top Products Revenue
                     </h3>
-                    <div className="h-[300px] w-full">
+                    <div className="h-75 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={stats.top_products}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -148,11 +148,11 @@ const AdminAnalytics = () => {
                 </div>
 
                 {/* Status Distribution */}
-                <div className="glass-card p-8 rounded-[2.5rem] border border-slate-100 min-h-[400px]">
+                <div className="glass-card p-8 rounded-[2.5rem] border border-slate-100 min-h-100">
                     <h3 className="text-xl font-black text-slate-900 mb-8 flex items-center gap-2 uppercase tracking-tighter">
                         <PieIcon size={24} className="text-brand-500" /> Order Status Distribution
                     </h3>
-                    <div className="h-[300px] w-full flex items-center justify-center">
+                    <div className="h-75 w-full flex items-center justify-center">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie

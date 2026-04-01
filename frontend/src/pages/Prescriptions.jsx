@@ -129,7 +129,7 @@ const Prescriptions = () => {
                   
                   {!success ? (
                      <div className="space-y-6">
-                        <label className="border-4 border-dashed border-slate-100 rounded-[2.5rem] p-12 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-50/30 hover:border-brand-100 transition-all relative overflow-hidden group min-h-[300px]">
+                        <label className="border-4 border-dashed border-slate-100 rounded-[2.5rem] p-12 flex flex-col items-center justify-center cursor-pointer hover:bg-brand-50/30 hover:border-brand-100 transition-all relative overflow-hidden group min-h-75">
                            <input type="file" className="hidden" accept="image/*, .pdf" onChange={handleFileChange} />
                            
                            {preview ? (

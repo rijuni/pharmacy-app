@@ -55,7 +55,7 @@ const Home = () => {
    return (
       <div className="space-y-12 pb-12">
          {/* Hero Section with 3D */}
-         <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 text-white min-h-[500px] flex items-center shadow-2xl">
+         <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 text-white min-h-125 flex items-center shadow-2xl">
             {/* Animated Background Mesh */}
             <div className="absolute inset-0 opacity-30">
                <div className="absolute top-0 -left-1/4 w-1/2 h-full bg-brand-500 rounded-full blur-[120px] animate-pulse"></div>
