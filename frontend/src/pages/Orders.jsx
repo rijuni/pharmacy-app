@@ -75,7 +75,7 @@ const Orders = () => {
             ) : (
                 <div className="space-y-6">
                     {orders.map((order) => (
-                        <div key={order.id} className="glass-card rounded-[2rem] overflow-hidden border border-slate-100 hover:shadow-xl transition-shadow">
+                        <div key={order.id} className="glass-card rounded-4xl overflow-hidden border border-slate-100 hover:shadow-xl transition-shadow">
                             {/* Order Header */}
                             <div className="p-6 border-b border-slate-50 bg-slate-50/30 flex flex-wrap items-center justify-between gap-4">
                                 <div className="flex gap-6">
