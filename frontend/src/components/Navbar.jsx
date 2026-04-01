@@ -57,13 +57,6 @@ const Navbar = () => {
 
   return (
     <header className="glass-card sticky top-0 z-50 transition-all duration-300">
-      {/* Top Banner */}
-      <div className="bg-brand-50/80 px-4 py-1.5 flex justify-center items-center w-full border-b border-brand-100">
-        <div className="bg-brand-100 text-brand-700 text-[11px] font-extrabold px-4 py-1 rounded-full flex items-center gap-2 shadow-sm border border-brand-200 animate-pulse uppercase tracking-widest cursor-default">
-          Delivery within 3km of Hospital
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           {/* Logo */}
